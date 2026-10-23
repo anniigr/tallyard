@@ -1,0 +1,2 @@
+09:59:19 killing worker
+09:59:40 restarting worker

@@ -1,0 +1,31 @@
+Tallyard simulator: 20 customers, 500 events/s for 90s, duplicates=5% late=2% invalid=1% seed=42
+  sent=2763 accepted=2763 dup=263 late=54 invalid=30 503=0 429=0 p99=254,5ms
+  sent=5750 accepted=5750 dup=650 late=110 invalid=53 503=0 429=0 p99=254,5ms
+  sent=8418 accepted=8418 dup=818 late=161 invalid=85 503=0 429=0 p99=254,5ms
+  sent=11134 accepted=11134 dup=934 late=217 invalid=107 503=0 429=0 p99=243,3ms
+  sent=13875 accepted=13875 dup=1175 late=271 invalid=138 503=0 429=0 p99=243,3ms
+  sent=16547 accepted=16547 dup=1347 late=323 invalid=174 503=0 429=0 p99=243,3ms
+  sent=19443 accepted=19443 dup=1643 late=372 invalid=197 503=0 429=0 p99=243,3ms
+  sent=22183 accepted=22183 dup=1883 late=421 invalid=225 503=0 429=0 p99=85,1ms
+  sent=25075 accepted=25075 dup=2175 late=478 invalid=242 503=0 429=0 p99=85,1ms
+  sent=27850 accepted=27850 dup=2350 late=537 invalid=264 503=0 429=0 p99=85,1ms
+  sent=30697 accepted=30697 dup=2597 late=590 invalid=287 503=0 429=0 p99=85,1ms
+  sent=33408 accepted=33408 dup=2808 late=647 invalid=310 503=0 429=0 p99=52,6ms
+  sent=36186 accepted=36186 dup=2986 late=716 invalid=344 503=0 429=0 p99=52,6ms
+  sent=39069 accepted=39069 dup=3269 late=765 invalid=377 503=0 429=0 p99=52,6ms
+  sent=42016 accepted=42016 dup=3616 late=817 invalid=398 503=0 429=0 p99=52,6ms
+  sent=44688 accepted=44688 dup=3788 late=868 invalid=421 503=0 429=0 p99=50,6ms
+  sent=47361 accepted=47361 dup=3961 late=915 invalid=444 503=0 429=0 p99=50,6ms
+
+=== Send summary ===
+events sent (incl. duplicates): 49104
+accepted by API:                49104
+duplicates injected:            4104
+late injected:                  937
+invalid injected:               459
+503 / 429 / other:              0 / 0 / 0 (retries 0)
+batch latency p50/p95/p99:      21,6 / 35,6 / 50,6 ms
+
+=== Truth check (waiting for the consumer to drain) ===
+ALL 20 CUSTOMERS MATCH: Tallyard's live totals equal the simulator's expected totals exactly.
+(937 late events were sent and are expected as adjustments on the next rating, not in live usage.)
