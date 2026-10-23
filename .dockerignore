@@ -1,0 +1,12 @@
+.git
+.github
+.idea
+*.iml
+**/target
+docs
+loadtest
+deploy/grafana
+deploy/prometheus
+.env
+.env.example
+*.md

@@ -1,0 +1,30 @@
+# Build
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local environment
+.env
+*.local.yml
+/deploy/data/
+/loadtest/results/
+/docs/assets/raw/
+
+# Temporary
+*.tmp
+*.swp
