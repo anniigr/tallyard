@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build, unit & integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Formatting (Spotless)
+        run: mvn -B -q spotless:check
+
+      - name: Unit, property, Modulith and ArchUnit tests
+        run: mvn -B -pl tallyard-app -am test
+
+      - name: Integration tests (Testcontainers: PostgreSQL + Kafka)
+        run: mvn -B -pl tallyard-app verify -DskipTests=false -Dsurefire.skip=true
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: "false"
+
+      - name: Package
+        run: mvn -B -q -DskipTests -Dspotless.check.skip=true package
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            tallyard-app/target/surefire-reports
+            tallyard-app/target/failsafe-reports
+            tallyard-app/target/site/jacoco*/jacoco.xml
+          if-no-files-found: ignore
+
+      - name: Upload simulator jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: tallyard-simulator
+          path: tallyard-simulator/target/tallyard-simulator.jar
+
+  docker:
+    name: Docker image
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image (not pushed)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          push: false
+          tags: tallyard/app:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  security:
+    name: Secrets & dependency review
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan for committed secrets (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
