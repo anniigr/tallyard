@@ -21,6 +21,8 @@
 | `tallyard.metering.batch` | timer (p50/p95/p99) | | Transactional processing time per batch |
 | `tallyard.metering.batches` | counter | | Batches processed |
 | `tallyard.billing.rating` / `tallyard.billing.replay` | timer | | Rating / replay duration |
+| `tallyard.billing.failures` | counter | | Lifecycle steps (close/rate/finalize) that threw and will be retried next tick |
+| `tallyard.billing.overdue_periods` | gauge | | Periods still due after the last scheduler tick; non-zero for more than a few ticks means a stuck period (runbook R6) |
 | `tallyard.entitlements.check` | timer (p50/p95/p99) | | Hot-path latency |
 | `tallyard.entitlements.decisions` | counter | `decision=ALLOW|DENY` | |
 | `tallyard.entitlements.snapshot_misses` | counter | | Cache misses (snapshot recomputed) |
@@ -67,5 +69,6 @@ insert and bucket upsert. The tenant id is a span attribute via MDC propagation.
 | Ingest failing | `sum(rate(http_server_requests_seconds_count{uri="/v1/events",status=~"5.."}[5m])) > 1` | page |
 | Dead letters | `increase(tallyard_metering_rejected_total{reason="SCHEMA_INVALID"}[10m]) > 0` | ticket |
 | Outbox stuck | `tallyard_outbox_backlog > 0 for 5m` | page |
+| Period stuck | `tallyard_billing_overdue_periods > 0 for 10m` or `increase(tallyard_billing_failures_total[10m]) > 0` | page |
 | Webhooks dead | `increase(tallyard_webhooks_deliveries_total{outcome="dead"}[1h]) > 0` | ticket |
 | Entitlement latency | `tallyard_entitlements_check_seconds{quantile="0.99"} > 0.05 for 5m` | ticket |

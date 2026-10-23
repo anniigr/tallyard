@@ -1,6 +1,6 @@
 # Final Project Selection: Tallyard
 
-*Phase 3 deliverable. Decision date: 2026-10-23.*
+*Decision date: 2026-10-23.*
 
 ## Decision
 

@@ -1,6 +1,6 @@
 # Tallyard
 
-**Billing-grade usage metering that counts exactly once.**
+**Billing-grade usage metering with effectively-once accounting and replay-provable invoices.**
 
 Tallyard ingests high-volume usage events from software products, counts them exactly once despite
 client retries, Kafka redelivery, late arrivals and worker crashes, rates them against pricing plans
@@ -39,7 +39,7 @@ Measured on a laptop (Apple M3, Docker Desktop) — details and raw outputs in
 
 | Scenario | Result |
 |---|---|
-| Simulator: 500 events/s for 90 s with 5 % duplicates, 2 % late, 1 % invalid; **worker killed at t+25 s, restarted at t+45 s** | 49,104 events accepted, 0 errors; lag peaked at 4,142 and drained in seconds; **all 20 customers' totals matched the simulator's expected totals exactly** |
+| Simulator: 500 events/s for 90 s with 5 % duplicates, 2 % late, 1 % invalid; **worker killed at t+25 s, restarted at t+45 s** | 49,104 events accepted, 0 errors; lag peaked at 4,142 and drained in seconds; **all 20 customers' totals matched the simulator's expected totals exactly** (the injected "late" events predated the fresh demo subscriptions and were rejected with a reason; the late-event-to-adjustment path is covered by `BillingLifecycleIT`) |
 | k6 ingest, 2,000 events/s for 60 s | 125,967 events accepted, 0 failures, HTTP p50 10 ms / p99 22.8 ms; a single worker counted the full load |
 | k6 entitlement checks, 500 req/s for 60 s | 0 failures, p50 0.27 ms / p99 6.05 ms |
 | Test suite (`mvn verify`) | 41 unit/property/architecture tests + 36 integration tests on real PostgreSQL and Kafka, all passing in 48 s |

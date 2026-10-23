@@ -1,6 +1,6 @@
 # Testing Strategy
 
-*Phase 7 deliverable. The suite is split by what each layer can prove. Counts and results in the
+*The suite is split by what each layer can prove. Counts and results in the
 final section are taken from actual runs (see `docs/engineering-progress.md` for the log).*
 
 ## Layers

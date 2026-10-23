@@ -1,6 +1,6 @@
 # Interview Questions and Answers
 
-*Phase 14 deliverable. 48 questions a Senior/Staff interviewer could ask about this repository, with
+*48 questions a Senior/Staff interviewer could ask about this repository, with
 answers grounded in the implementation. File references are relative to
 `tallyard-app/src/main/java/io/tallyard/`.*
 

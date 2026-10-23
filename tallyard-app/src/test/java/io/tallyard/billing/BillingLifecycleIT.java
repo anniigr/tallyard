@@ -135,6 +135,29 @@ class BillingLifecycleIT extends AbstractIntegrationTest {
     }
 
     @Test
+    void prepaidCustomerIsRatedWithCreditsAppliedThroughThePublicApi() {
+        Env e = env("prepaid", new BillingInterval(BillingInterval.Unit.DAYS, 30));
+        e.admin().post("/v1/credits", Map.of("customerExternalId", "prepaid", "currency", "USD", "amount", 5));
+        e.ingest().ingest(ApiClient.batch("pp", "request", "prepaid", e.now(), 200, Map.of("tokens", 1000)));
+        UUID period = e.admin().openPeriodId("prepaid");
+        await().atMost(Duration.ofSeconds(30))
+                .untilAsserted(() ->
+                        assertThat(e.admin().usage(period).get("api_calls")).isEqualByComparingTo("200"));
+        // 100 billable calls × 0.01 = 1.00; 200,000 tokens × 0.0001 = 20.00 → subtotal 21.00, credits 5.00
+        JsonNode invoice = e.admin().postJson("/v1/periods/" + period + "/rate", null);
+        assertThat(invoice.get("subtotal").decimalValue()).isEqualByComparingTo("21.00");
+        assertThat(invoice.get("creditsApplied").decimalValue()).isEqualByComparingTo("5.00");
+        assertThat(invoice.get("total").decimalValue()).isEqualByComparingTo("16.00");
+        JsonNode grants = e.admin().getJson("/v1/customers/prepaid/credits");
+        assertThat(grants.get(0).get("remaining").decimalValue()).isEqualByComparingTo("0");
+        assertThat(e.admin()
+                        .postJson("/v1/periods/" + period + "/replay", null)
+                        .get("matches")
+                        .asBoolean())
+                .isTrue();
+    }
+
+    @Test
     void illegalTransitionsAreRejected() {
         Env e = env("ill", new BillingInterval(BillingInterval.Unit.DAYS, 30));
         UUID period = e.admin().openPeriodId("ill");
@@ -183,6 +206,9 @@ class BillingLifecycleIT extends AbstractIntegrationTest {
     @Test
     void schedulerClosesAndRatesPeriodsWhenDue() {
         Env e = env("sched", new BillingInterval(BillingInterval.Unit.MINUTES, 1));
+        // a prepaid customer in the same tenant must not stall the scheduler for the others
+        tenants.customer(e.fx().tenantId(), "sched-prepaid", "std", e.now().minusSeconds(120));
+        e.admin().post("/v1/credits", Map.of("customerExternalId", "sched-prepaid", "currency", "USD", "amount", 3));
         // subscription started 120 s ago with 1-minute periods and no grace: the scheduler must have
         // rated the first period and opened successors.
         await().atMost(Duration.ofSeconds(20)).untilAsserted(() -> {

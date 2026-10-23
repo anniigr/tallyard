@@ -175,10 +175,6 @@ class BillingService implements BillingPeriods, BillingQueries {
 
         UUID invoiceId = Ids.newId(clock);
         Money subtotal = rated.subtotal();
-        CreditLedger.Application applied =
-                credits.apply(period.getTenantId(), period.getCustomerId(), subtotal, invoiceId, now);
-        Money total = subtotal.minus(applied.applied());
-
         InvoiceDraft invoice = new InvoiceDraft(
                 invoiceId,
                 period.getTenantId(),
@@ -186,8 +182,6 @@ class BillingService implements BillingPeriods, BillingQueries {
                 period.getCustomerId(),
                 in.plan().currency().getCurrencyCode(),
                 subtotal.amount(),
-                applied.applied().amount(),
-                total.amount(),
                 rated.hash(),
                 now);
         int position = 0;
@@ -203,7 +197,12 @@ class BillingService implements BillingPeriods, BillingQueries {
                     line.amount().amount(),
                     json.write(line.breakdown())));
         }
-        invoices.save(invoice);
+        // The invoice row must exist before the credit ledger references it (FK credit_ledger_entry.invoice_id).
+        invoices.saveAndFlush(invoice);
+        CreditLedger.Application applied =
+                credits.apply(period.getTenantId(), period.getCustomerId(), subtotal, invoiceId, now);
+        invoice.applyCredits(applied.applied().amount());
+        Money total = subtotal.minus(applied.applied());
         period.markRated(now);
 
         Map<String, Object> payload = periodPayload(period, invoice);
@@ -284,31 +283,57 @@ class BillingService implements BillingPeriods, BillingQueries {
 
     // ------------------------------------------------------------------ scheduler entry points
 
-    /** @return number of periods processed */
-    @Transactional
-    public int closeDue(int limit) {
-        List<BillingPeriod> due =
-                periods.lockDueForClosing(clock.instant(), org.springframework.data.domain.Limit.of(limit));
-        due.forEach(this::closeLocked);
-        return due.size();
+    /**
+     * Ids of periods due for a step, claimed without locks. Each period is then processed in its own
+     * transaction by {@link #closeOne}, {@link #rateOne} or {@link #finalizeOne}, so one failing period
+     * (bad plan, constraint violation) cannot stall the others; the per-period {@code FOR UPDATE} and the
+     * state re-check make the work idempotent across concurrent workers.
+     */
+    @Transactional(readOnly = true)
+    public List<UUID> dueForClosing(int limit) {
+        return periods.findDueForClosing(clock.instant(), org.springframework.data.domain.Limit.of(limit));
     }
 
-    @Transactional
-    public int rateDue(int limit) {
-        List<BillingPeriod> due =
-                periods.lockDueForRating(clock.instant(), org.springframework.data.domain.Limit.of(limit));
-        for (BillingPeriod p : due) {
-            rateLocked(p);
-        }
-        return due.size();
+    @Transactional(readOnly = true)
+    public List<UUID> dueForRating(int limit) {
+        return periods.findDueForRating(clock.instant(), org.springframework.data.domain.Limit.of(limit));
     }
 
-    @Transactional
-    public int finalizeDue(int limit) {
+    @Transactional(readOnly = true)
+    public List<UUID> dueForFinalizing(int limit) {
         Instant before = clock.instant().minus(props.billing().autoFinalizeAfter());
-        List<BillingPeriod> due = periods.lockDueForFinalizing(before, org.springframework.data.domain.Limit.of(limit));
-        due.forEach(this::finalizeLocked);
-        return due.size();
+        return periods.findDueForFinalizing(before, org.springframework.data.domain.Limit.of(limit));
+    }
+
+    /** @return true if the step was performed; false if another worker already did it */
+    @Transactional
+    public boolean closeOne(UUID periodId) {
+        BillingPeriod period = periods.lockForUpdate(periodId).orElse(null);
+        if (period == null || !period.isDueForClosing(clock.instant())) {
+            return false;
+        }
+        closeLocked(period);
+        return true;
+    }
+
+    @Transactional
+    public boolean rateOne(UUID periodId) {
+        BillingPeriod period = periods.lockForUpdate(periodId).orElse(null);
+        if (period == null || !period.isDueForRating(clock.instant())) {
+            return false;
+        }
+        rateLocked(period);
+        return true;
+    }
+
+    @Transactional
+    public boolean finalizeOne(UUID periodId) {
+        BillingPeriod period = periods.lockForUpdate(periodId).orElse(null);
+        if (period == null || period.getState() != PeriodState.RATED) {
+            return false;
+        }
+        finalizeLocked(period);
+        return true;
     }
 
     // ------------------------------------------------------------------ queries

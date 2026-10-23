@@ -1,6 +1,6 @@
 # Interview Walkthrough
 
-*Phase 14 deliverable. Scripts at increasing depth. Every claim points at code
+*Scripts at increasing depth. Every claim points at code
 (`tallyard-app/src/main/java/io/tallyard/…`), tests or an ADR.*
 
 ## 30-second pitch

@@ -1,6 +1,6 @@
 # Failure Scenarios
 
-*Phase 7 deliverable. Each scenario: how it is provoked, the expected behaviour, and where it is
+*Each scenario: how it is provoked, the expected behaviour, and where it is
 verified — automatically (test class) or as a manual drill with the recorded procedure.*
 
 | # | Scenario | Provoked by | Expected behaviour | Verification |

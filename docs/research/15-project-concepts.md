@@ -1,6 +1,6 @@
 # Fifteen Candidate Product Concepts
 
-*Phase 3 deliverable. Research date: 2026-10-23. Scoring model and the final choice are in
+*Research date: 2026-10-23. Scoring model and the final choice are in
 [top-five-comparison.md](top-five-comparison.md) and [final-project-selection.md](final-project-selection.md).*
 
 ## Purpose and constraints

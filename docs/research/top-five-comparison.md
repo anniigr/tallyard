@@ -1,6 +1,6 @@
 # Top-Five Concept Comparison
 
-*Phase 3 deliverable. Scoring date: 2026-10-23. Candidate descriptions are in
+*Scoring date: 2026-10-23. Candidate descriptions are in
 [15-project-concepts.md](15-project-concepts.md).*
 
 ## Scoring model

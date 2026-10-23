@@ -1,6 +1,6 @@
 # Tallyard — Product Specification
 
-*Phase 4 deliverable. Version 1.0, 2026-10-23.*
+*Version 1.0, 2026-10-23.*
 
 ## 1. Identity
 

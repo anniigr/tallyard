@@ -57,6 +57,18 @@ interface BillingPeriodRepository extends JpaRepository<BillingPeriod, UUID> {
     List<BillingPeriod> lockDueForFinalizing(
             @Param("before") Instant before, org.springframework.data.domain.Limit limit);
 
+    @Query(
+            "select p.id from BillingPeriod p where p.state = io.tallyard.billing.PeriodState.OPEN and p.endsAt <= :now order by p.endsAt")
+    List<UUID> findDueForClosing(@Param("now") Instant now, org.springframework.data.domain.Limit limit);
+
+    @Query(
+            "select p.id from BillingPeriod p where p.state = io.tallyard.billing.PeriodState.CLOSING and p.graceUntil <= :now order by p.graceUntil")
+    List<UUID> findDueForRating(@Param("now") Instant now, org.springframework.data.domain.Limit limit);
+
+    @Query(
+            "select p.id from BillingPeriod p where p.state = io.tallyard.billing.PeriodState.RATED and p.ratedAt <= :before order by p.ratedAt")
+    List<UUID> findDueForFinalizing(@Param("before") Instant before, org.springframework.data.domain.Limit limit);
+
     List<BillingPeriod> findByCustomerIdOrderByStartsAtDesc(UUID customerId);
 
     List<BillingPeriod> findByTenantIdOrderByStartsAtDesc(UUID tenantId);

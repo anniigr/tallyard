@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
@@ -126,6 +127,7 @@ public final class Simulator {
 
     void run() throws Exception {
         System.out.printf(
+                Locale.ROOT,
                 "Tallyard simulator: %d customers, %d events/s for %ds, duplicates=%.0f%% late=%.0f%% invalid=%.0f%% seed=%d%n",
                 opts.customers(),
                 opts.rate(),
@@ -153,6 +155,7 @@ public final class Simulator {
             if (System.nanoTime() - lastReport > TimeUnit.SECONDS.toNanos(5)) {
                 lastReport = System.nanoTime();
                 System.out.printf(
+                        Locale.ROOT,
                         "  sent=%d accepted=%d dup=%d late=%d invalid=%d 503=%d 429=%d p99=%.1fms%n",
                         stats.sent.sum(),
                         stats.accepted.sum(),
@@ -301,17 +304,24 @@ public final class Simulator {
     private void report() {
         System.out.println();
         System.out.println("=== Send summary ===");
-        System.out.printf("events sent (incl. duplicates): %d%n", stats.sent.sum());
-        System.out.printf("accepted by API:                %d%n", stats.accepted.sum());
-        System.out.printf("duplicates injected:            %d%n", stats.duplicatesSent.sum());
-        System.out.printf("late injected:                  %d%n", stats.lateSent.sum());
-        System.out.printf("invalid injected:               %d%n", stats.invalidSent.sum());
+        System.out.printf(Locale.ROOT, "events sent (incl. duplicates): %d%n", stats.sent.sum());
+        System.out.printf(Locale.ROOT, "accepted by API:                %d%n", stats.accepted.sum());
+        System.out.printf(Locale.ROOT, "duplicates injected:            %d%n", stats.duplicatesSent.sum());
+        System.out.printf(Locale.ROOT, "late injected:                  %d%n", stats.lateSent.sum());
+        System.out.printf(Locale.ROOT, "invalid injected:               %d%n", stats.invalidSent.sum());
         System.out.printf(
+                Locale.ROOT,
                 "503 / 429 / other:              %d / %d / %d (retries %d)%n",
-                stats.http503.sum(), stats.http429.sum(), stats.httpOther.sum(), stats.retries.sum());
+                stats.http503.sum(),
+                stats.http429.sum(),
+                stats.httpOther.sum(),
+                stats.retries.sum());
         System.out.printf(
+                Locale.ROOT,
                 "batch latency p50/p95/p99:      %.1f / %.1f / %.1f ms%n",
-                percentile(0.5) / 1000.0, percentile(0.95) / 1000.0, percentile(0.99) / 1000.0);
+                percentile(0.5) / 1000.0,
+                percentile(0.95) / 1000.0,
+                percentile(0.99) / 1000.0);
     }
 
     private Map<String, Instant> loadOpenPeriodStarts() throws Exception {
@@ -370,20 +380,25 @@ public final class Simulator {
                         .mapToLong(x -> x.lateEvents.sum())
                         .sum();
                 System.out.printf(
+                        Locale.ROOT,
                         "ALL %d CUSTOMERS MATCH: Tallyard's live totals equal the simulator's expected totals exactly.%n",
                         sorted.size());
                 System.out.printf(
+                        Locale.ROOT,
                         "(%d late events were sent and are expected as adjustments on the next rating, not in live usage.)%n",
                         late);
                 return;
             }
             if (round % 5 == 4) {
-                System.out.printf("  %d customer(s) still differ after %ds...%n%s", mismatches, round + 1, detail);
+                System.out.printf(
+                        Locale.ROOT, "  %d customer(s) still differ after %ds...%n%s", mismatches, round + 1, detail);
             }
             Thread.sleep(1000);
         }
         System.out.printf(
-                "MISMATCH: %d customer(s) differ after waiting 60s. Expected totals != stored totals.%n", mismatches);
+                Locale.ROOT,
+                "MISMATCH: %d customer(s) differ after waiting 60s. Expected totals != stored totals.%n",
+                mismatches);
         System.exit(1);
     }
 

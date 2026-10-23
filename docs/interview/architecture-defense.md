@@ -1,6 +1,6 @@
 # Architecture Defence
 
-*Phase 14 deliverable. Direct answers to the questions a Staff engineer asks.*
+*Direct answers to the questions a Staff engineer asks.*
 
 **Why this architecture?**
 Because the product's correctness properties — exactly-once counting, atomic settlement, exact rating,

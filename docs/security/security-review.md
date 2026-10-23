@@ -1,6 +1,6 @@
 # Security Review
 
-*Phase 10 deliverable, 2026-10-23. Scope: the `tallyard-app` code base, its configuration and the
+*2026-10-23. Scope: the `tallyard-app` code base, its configuration and the
 local deployment. Findings are classified as implemented control, accepted limitation, or follow-up.*
 
 ## 1. Authentication and authorization

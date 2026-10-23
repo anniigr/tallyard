@@ -1,6 +1,6 @@
 # Tallyard Architecture
 
-*Phase 5 deliverable. Every diagram below is derived from the implemented code (`tallyard-app`), and
+*Every diagram below is derived from the implemented code (`tallyard-app`), and
 the module structure is verified on every build by `ModularityTest`. Decisions are recorded in
 [adr/](adr/); technology choices in [technology-decisions.md](technology-decisions.md); failure
 behaviour in [failure-model.md](failure-model.md).*

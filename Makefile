@@ -57,4 +57,4 @@ load-entitlement: ## k6 entitlement load test (docker)
 	docker run --rm -i --network host -e API_KEY=$$(grep TALLYARD_DEMO_ADMIN_KEY .env | cut -d= -f2) -e BASE_URL=http://localhost:8080 -v $$(pwd)/loadtest:/scripts grafana/k6 run /scripts/entitlement.js
 
 openapi: ## refresh docs/api/openapi.json from the running tests
-	$(MVN) verify -Dit.test=ContractTest -Dcontracts.update=true
+	$(MVN) verify -Dit.test=ContractIT -Dcontracts.update=true

@@ -1,6 +1,6 @@
 # Operations Runbooks
 
-*Phase 9 deliverable. Each runbook states the signal, how to confirm, what to do, and how to verify
+*Each runbook states the signal, how to confirm, what to do, and how to verify
 recovery. Metric names are the ones exposed at `/actuator/prometheus`; panel names refer to the
 provisioned Grafana dashboard "Tallyard — Operations".*
 
@@ -13,7 +13,7 @@ provisioned Grafana dashboard "Tallyard — Operations".*
 | Everything DB-backed fails | readiness `db: DOWN`; Hikari connection timeouts | [R3](#r3-postgresql-unavailable) |
 | Dead letters | `tallyard_metering_rejected_total{reason="SCHEMA_INVALID"}`; DLT size | [R4](#r4-dead-letter-topic-has-records) |
 | Rejections spike | `tallyard_metering_rejected_total` by reason | [R5](#r5-rejections-by-reason) |
-| Period stuck | A period in `CLOSING` long after `grace_until`; no `period.rated` events | [R6](#r6-a-period-is-stuck) |
+| Period stuck | `tallyard_billing_overdue_periods` > 0 for several ticks; `tallyard_billing_failures_total` increasing | [R6](#r6-a-period-is-stuck) |
 | Webhooks failing | `tallyard_webhooks_deliveries_total{outcome="dead"}`; `tallyard_webhooks_pending` | [R7](#r7-webhook-deliveries-failing) |
 | Outbox backlog | `tallyard_outbox_backlog` > 0 and growing | [R8](#r8-outbox-backlog-growing) |
 | Invoice disputed | – | [R9](#r9-explain-or-verify-an-invoice) |
@@ -89,8 +89,10 @@ API with their original ids (idempotent).
 
 ## R6. A period is stuck
 
-**Confirm.** `GET /v1/periods` shows `CLOSING` with `graceUntil` in the past, or `OPEN` with `endsAt`
-long past. Worker logs may show `Billing scheduler: rate failed`.
+**Confirm.** `tallyard_billing_overdue_periods` stays above zero and `tallyard_billing_failures_total`
+grows; `GET /v1/periods` shows `CLOSING` with `graceUntil` in the past. Worker logs show
+`Billing scheduler: rate <period id> failed: <exception>`. Each period is processed in its own
+transaction, so one failing period never blocks the others.
 
 **Action.** Read the logged exception (e.g. plan deleted, DB constraint). Force the step with
 `POST /v1/periods/{id}/rate` (ADMIN) and inspect the problem+json. Rating is idempotent and

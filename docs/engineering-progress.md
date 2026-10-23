@@ -18,10 +18,10 @@ work can be resumed coherently. Dates are real (2026-10-23).*
 | 9 Observability | Metrics, traces, health, Grafana dashboard, `docs/operations/` | Done (screenshots pending) |
 | 10 Security | `docs/security/security-review.md` | Done |
 | 11 DevOps | `deploy/docker-compose.yml`, `deploy/Dockerfile`, `Makefile`, `.github/workflows/ci.yml` | Done (CI run pending push) |
-| 12 GitHub | Repository creation, branches, commits | Pending |
-| 13 README | Pending |
+| 12 GitHub | https://github.com/anniigr/tallyard — `main` (scaffold → verified release), `develop` (feature commits); CI green on develop | Done |
+| 13 README | `README.md` with measured numbers and real screenshots | Done |
 | 14 Interview | `docs/interview/` (walkthrough, 48 Q&A, defence, ownership checklist) | Done |
-| 15 Review | Pending |
+| 15 Review | `docs/review/` — two independent adversarial reviews; critical finding fixed (see below) | Done |
 
 ## Important decisions
 
@@ -44,6 +44,7 @@ work can be resumed coherently. Dates are real (2026-10-23).*
 | Consumer retried partition forever | Poison payload (not JSON) inserted into a `jsonb` column failed the whole batch | Wrap raw payload as a JSON string |
 | Rate limiter allowed 2 s of burst | GCRA baseline offset by capacity | `base = max(current, now)` |
 | Nested `@Valid` list → 500-ish shape | `HandlerMethodValidationException` not handled | Dedicated handler |
+| **Rating a prepaid customer failed with an FK violation** (found by the SRE review, visible as `rate failed` every 5 s in the worker log; the 409 seen on `cust-007` during the demo was this, misread as a lock race) | Credit ledger entries referenced the invoice before the invoice row was persisted; the scheduler rated 25 periods per transaction, so one failing period stalled all | Persist the invoice first, then apply credits; scheduler processes each period in its own transaction; new `tallyard.billing.failures` counter and `overdue_periods` gauge; new end-to-end IT `prepaidCustomerIsRatedWithCreditsAppliedThroughThePublicApi` |
 
 ## Verification log
 
@@ -55,9 +56,6 @@ work can be resumed coherently. Dates are real (2026-10-23).*
 
 ## Open items / next actions
 
-1. Full IT suite green; record counts here.
-2. Build the Docker image; run the Compose stack; run simulator + k6; record `docs/performance`.
-3. Screenshots/GIF of dashboard, Grafana, Jaeger into `docs/assets`.
-4. README.
-5. Git history (`main` initial, `develop` work, merge), GitHub repository, push, CI verification.
-6. Independent review (Phase 15) and fixes.
+1. Merge `develop` into `main` after the post-review verification run; confirm CI on `main`.
+2. Follow-ups accepted as out of scope for this release (tracked in `docs/review/`): webhook SSRF
+   allow-list, image/dependency vulnerability scanning, encryption-key rotation, table partitioning.

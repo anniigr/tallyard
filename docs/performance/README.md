@@ -1,6 +1,6 @@
 # Performance
 
-*Phase 8 deliverable. Every number in this document was measured on the environment below on
+*Every number in this document was measured on the environment below on
 2026-10-23 with the commands shown; raw outputs are in `raw/`. Nothing is extrapolated. These are
 laptop numbers inside Docker Desktop and should be read as "the system behaves as designed under
 load", not as production capacity figures.*

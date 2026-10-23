@@ -1,6 +1,6 @@
 # Tallyard — Use Cases and User Journeys
 
-*Phase 4 deliverable, 2026-10-23.*
+*2026-10-23.*
 
 ## Actors
 

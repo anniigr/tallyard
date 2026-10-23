@@ -62,8 +62,6 @@ class InvoiceDraft {
             UUID customerId,
             String currency,
             BigDecimal subtotal,
-            BigDecimal creditsApplied,
-            BigDecimal total,
             String reproducibilityHash,
             Instant createdAt) {
         this.id = id;
@@ -72,10 +70,16 @@ class InvoiceDraft {
         this.customerId = customerId;
         this.currency = currency;
         this.subtotal = subtotal;
-        this.creditsApplied = creditsApplied;
-        this.total = total;
+        this.creditsApplied = BigDecimal.ZERO;
+        this.total = subtotal;
         this.reproducibilityHash = reproducibilityHash;
         this.createdAt = createdAt;
+    }
+
+    /** Records prepaid credit applied against the subtotal; called once, after the ledger entries are written. */
+    void applyCredits(BigDecimal amount) {
+        this.creditsApplied = amount;
+        this.total = subtotal.subtract(amount);
     }
 
     void addLine(InvoiceLine line) {

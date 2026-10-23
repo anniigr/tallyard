@@ -1,6 +1,6 @@
 # Technology Decisions
 
-*Phase 5 deliverable. Each row states why a technology is in (or out). "Earned its place" means it
+*Each row states why a technology is in (or out). "Earned its place" means it
 solves a concrete problem in Tallyard that would otherwise require hand-written code or leave a gap.*
 
 ## Selected
