@@ -32,34 +32,68 @@ projects (OpenMeter, Lago) solve this. There was no modern open-source Java impl
 
 ## Demonstration
 
-A 60-second tour of the operations UI: usage climbs while the simulator streams events with
-deliberate duplicates, late arrivals and invalid payloads; a period is rated; the invoice is proven
-by replay; signed webhooks land; an entitlement check flips from ALLOW to DENY at the plan's hard
-limit.
+Everything below was recorded against the running Compose stack with the demo tenant — no mock-ups.
 
-![Tallyard demo](docs/assets/demo.gif)
+### The 60-second tour
 
-<table>
-<tr>
-<td width="50%"><img src="docs/assets/01-live-usage.png" alt="Live usage per customer and meter in the open period"><br><sub><b>Live counting.</b> Every customer's open period with per-meter quantities, live rating estimate and prepaid balance, refreshed every 2 s while the simulator injects 5 % duplicates — the <i>Events in log</i> tile moves, the duplicates do not.</sub></td>
-<td width="50%"><img src="docs/assets/02-invoice-breakdown.png" alt="Invoice draft with tier-by-tier breakdown"><br><sub><b>Explainable invoices.</b> Graduated / per-unit / volume / package lines with the exact tiers entered, included units, packages and a minimum-commitment top-up, plus the SHA-256 reproducibility hash.</sub></td>
-</tr>
-<tr>
-<td><img src="docs/assets/03-replay-match.png" alt="Replay of a rated period reports matches=true"><br><sub><b>Replay proof.</b> The rated period is recomputed from the immutable event log (by recorded period membership) and re-rated: <code>✓ matches</code> with an identical hash, in milliseconds.</sub></td>
-<td><img src="docs/assets/04-webhooks.png" alt="Webhook deliveries and signed receipts in the demo sink"><br><sub><b>Reliable fan-out.</b> Outbox → Kafka → durable deliveries with attempts and last status; the built-in sink verifies every HMAC-SHA256 signature.</sub></td>
-</tr>
-<tr>
-<td><img src="docs/assets/05-entitlement.png" alt="Entitlement check: ALLOW then DENY at the hard limit"><br><sub><b>Real-time entitlements.</b> A capped <i>starter</i> customer: 1 more call is allowed; 6,000 would exceed the 5,000 hard limit and is denied with usage, limit and remaining.</sub></td>
-<td><img src="docs/assets/06-grafana-crash-drill.png" alt="Grafana: metering outcomes and consumer lag during the crash drill"><br><sub><b>Crash drill in Grafana.</b> The worker JVM is killed under 500 events/s: the gap is the outage, Compose restarts the container, <i>stored</i> spikes as the backlog drains, duplicates blip once (the redelivered batch) and never double-count. The lag panel shows Kafka's <code>records-lag-max</code>, a windowed maximum, so it plateaus for its 60 s window after recovery.</sub></td>
-</tr>
-</table>
+The simulator streams events with deliberate duplicates, late arrivals and invalid payloads; a period
+is rated; the invoice is proven by replay; signed webhooks land; an entitlement check flips from
+ALLOW to DENY at the plan's hard limit.
 
-<details>
-<summary>Distributed trace of one ingest request (Jaeger)</summary>
+![Tallyard demo: live counting, rating, replay proof, webhooks, entitlements](docs/assets/demo.gif)
 
-![Jaeger trace: HTTP → 100 Kafka produces](docs/assets/jaeger-trace.png)
+### 1 · Live counting
 
-</details>
+Every customer's open period with per-meter quantities, a live rating estimate and the prepaid
+balance, refreshed every two seconds. The simulator injects 5 % duplicates: the *Events in log* tile
+moves, the duplicates do not.
+
+![Live usage per customer and meter in the open period](docs/assets/01-live-usage.png)
+
+### 2 · Explainable invoices
+
+Rating a period produces one line per plan component — graduated, per-unit, volume, package — with
+the exact tiers entered, included units, packages and a minimum-commitment top-up when it applies,
+plus the SHA-256 reproducibility hash of the whole draft.
+
+![Invoice draft with tier-by-tier breakdown](docs/assets/02-invoice-breakdown.png)
+
+### 3 · Replay proof
+
+The rated period is recomputed from the immutable event log (by recorded period membership) and
+re-rated. `✓ matches` with an identical hash — in milliseconds.
+
+![Replay of a rated period reports matches=true](docs/assets/03-replay-match.png)
+
+### 4 · Reliable fan-out
+
+Transactional outbox → Kafka → durable webhook deliveries with attempts and last status. The built-in
+demo sink verifies every HMAC-SHA256 signature.
+
+![Webhook deliveries and signed receipts in the demo sink](docs/assets/04-webhooks.png)
+
+### 5 · Real-time entitlements
+
+A capped *starter* customer: one more call is allowed; 6,000 would exceed the 5,000 hard limit and
+is denied with usage, limit and remaining.
+
+![Entitlement check: DENY at the hard limit](docs/assets/05-entitlement.png)
+
+### 6 · Crash drill in Grafana
+
+The worker JVM is killed under 500 events/s. The gap is the outage; Compose restarts the container;
+*stored* spikes as the backlog drains; duplicates blip once (the redelivered batch) and never
+double-count. The lag panel plots Kafka's `records-lag-max`, a windowed maximum, which is why it
+plateaus for its 60 s window after recovery.
+
+![Grafana: metering outcomes and consumer lag during the crash drill](docs/assets/06-grafana-crash-drill.png)
+
+### 7 · One request, end to end
+
+A single ingest request in Jaeger: HTTP → security filter → 100 Kafka produces, each acknowledged by
+the broker before the 202 is returned.
+
+![Jaeger trace: HTTP ingest with 100 Kafka produces](docs/assets/jaeger-trace.png)
 
 Measured on a laptop (Apple M3, Docker Desktop) — details and raw outputs in
 [docs/performance](docs/performance/README.md):
