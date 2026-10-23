@@ -32,7 +32,7 @@ jobs:
       - name: Unit, property, Modulith and ArchUnit tests
         run: mvn -B -pl tallyard-app -am test
 
-      - name: Integration tests (Testcontainers: PostgreSQL + Kafka)
+      - name: "Integration tests (Testcontainers: PostgreSQL + Kafka)"
         run: mvn -B -pl tallyard-app verify -DskipTests=false -Dsurefire.skip=true
         env:
           TESTCONTAINERS_RYUK_DISABLED: "false"
