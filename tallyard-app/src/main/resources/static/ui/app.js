@@ -9,7 +9,8 @@
     sessionStorage.setItem('tallyard.key', fragmentKey);
     history.replaceState(null, '', location.pathname);
   }
-  const state = { key: sessionStorage.getItem('tallyard.key') || '', timer: null, busy: false };
+  // replays: periodId → last replay report; openInvoices: ids kept expanded across re-renders
+  const state = { key: sessionStorage.getItem('tallyard.key') || '', timer: null, busy: false, replays: {}, openInvoices: new Set() };
 
   const fmtTime = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour12: false }) : '–';
   const fmtMoney = (v, cur) => v == null ? '–' : `${Number(v).toFixed(2)} ${cur || ''}`.trim();
@@ -74,23 +75,23 @@
       </tr>`).join('');
     $('#customers tbody').innerHTML = customers;
 
-    const customerById = Object.fromEntries(o.customers.filter((c) => c.openPeriodId).map((c) => [c.openPeriodId, c.externalId]));
+    const customerById = Object.fromEntries(o.customers.map((c) => [c.customerId, c.externalId]));
     $('#periods tbody').innerHTML = o.periods.map((p) => `
       <tr>
         <td><span class="badge ${p.state}">${p.state}</span></td>
-        <td><code title="${p.id}">${esc(customerById[p.id] || short(p.customerId))}</code></td>
+        <td><code title="period ${p.id}">${esc(customerById[p.customerId] || short(p.customerId))}</code></td>
         <td class="muted">${fmtTime(p.startsAt)} → ${fmtTime(p.endsAt)}</td>
         <td>
           ${p.state === 'OPEN' ? `<button class="small" data-act="close" data-id="${p.id}">close</button>` : ''}
           ${p.state === 'OPEN' || p.state === 'CLOSING' ? `<button class="small" data-act="rate" data-id="${p.id}">rate</button>` : ''}
           ${p.state === 'RATED' ? `<button class="small" data-act="finalize" data-id="${p.id}">finalize</button>` : ''}
           ${p.state === 'RATED' || p.state === 'FINALIZED' ? `<button class="small" data-act="replay" data-id="${p.id}">replay</button>` : ''}
-          <span id="replay-${p.id}"></span>
+          <span id="replay-${p.id}">${renderReplay(state.replays[p.id])}</span>
         </td>
       </tr>`).join('');
 
     $('#invoices').innerHTML = o.invoices.length ? o.invoices.map((inv) => `
-      <details class="invoice">
+      <details class="invoice" data-id="${inv.id}" ${state.openInvoices.has(inv.id) ? 'open' : ''}>
         <summary>
           <span><span class="badge RATED">draft</span> <code>${short(inv.periodId)}</code> ${fmtTime(inv.createdAt)}</span>
           <span>subtotal <b>${fmtMoney(inv.subtotal, inv.currency)}</b> · credits ${fmtMoney(inv.creditsApplied, inv.currency)} · total <b>${fmtMoney(inv.total, inv.currency)}</b></span>
@@ -104,6 +105,13 @@
     $('#rejections tbody').innerHTML = o.rejections.map((r) => `
       <tr><td class="muted">${fmtTime(r.createdAt)}</td><td><code>${esc(r.reason)}</code></td><td>${esc(r.subject || '')}</td><td><code>${esc(r.eventId || '')}</code></td><td class="muted">${esc(r.detail || '')}</td></tr>`).join('')
       || '<tr><td colspan="5" class="muted">none</td></tr>';
+  }
+
+  function renderReplay(r) {
+    if (!r) return '';
+    return r.matches
+      ? `<span class="replay-ok">✓ matches · hash ${esc(String(r.replayedHash).slice(0, 12))}… · ${r.durationMillis} ms</span>`
+      : `<span class="replay-bad">✗ ${esc(r.differences.join('; '))}</span>`;
   }
 
   function summarizeBreakdown(json) {
@@ -165,15 +173,22 @@
     try {
       if (act === 'replay') {
         const r = await action(`replay ${short(id)}`, () => api('POST', `/v1/periods/${id}/replay`));
-        $(`#replay-${id}`).innerHTML = r.matches
-          ? `<span class="replay-ok">✓ matches (${r.durationMillis} ms)</span>`
-          : `<span class="replay-bad">✗ ${esc(r.differences.join('; '))}</span>`;
+        state.replays[id] = r;
+        $(`#replay-${id}`).innerHTML = renderReplay(r);
       } else {
         await action(`${act} ${short(id)}`, () => api('POST', `/v1/periods/${id}/${act}`));
         await refresh();
       }
     } catch { /* logged */ } finally { btn.disabled = false; }
   });
+
+  // remember which invoice drafts the operator expanded so refreshes do not collapse them
+  document.addEventListener('toggle', (ev) => {
+    const d = ev.target;
+    if (d.matches && d.matches('details.invoice')) {
+      if (d.open) state.openInvoices.add(d.dataset.id); else state.openInvoices.delete(d.dataset.id);
+    }
+  }, true);
 
   $('#entitlement').addEventListener('submit', async (ev) => {
     ev.preventDefault();

@@ -32,17 +32,44 @@ projects (OpenMeter, Lago) solve this. There was no modern open-source Java impl
 
 ## Demonstration
 
-![Operations dashboard](docs/assets/dashboard.png)
+A 60-second tour of the operations UI: usage climbs while the simulator streams events with
+deliberate duplicates, late arrivals and invalid payloads; a period is rated; the invoice is proven
+by replay; signed webhooks land; an entitlement check flips from ALLOW to DENY at the plan's hard
+limit.
+
+![Tallyard demo](docs/assets/demo.gif)
+
+<table>
+<tr>
+<td width="50%"><img src="docs/assets/01-live-usage.png" alt="Live usage per customer and meter in the open period"><br><sub><b>Live counting.</b> Every customer's open period with per-meter quantities, live rating estimate and prepaid balance, refreshed every 2 s while the simulator injects 5 % duplicates — the <i>Events in log</i> tile moves, the duplicates do not.</sub></td>
+<td width="50%"><img src="docs/assets/02-invoice-breakdown.png" alt="Invoice draft with tier-by-tier breakdown"><br><sub><b>Explainable invoices.</b> Graduated / per-unit / volume / package lines with the exact tiers entered, included units, packages and a minimum-commitment top-up, plus the SHA-256 reproducibility hash.</sub></td>
+</tr>
+<tr>
+<td><img src="docs/assets/03-replay-match.png" alt="Replay of a rated period reports matches=true"><br><sub><b>Replay proof.</b> The rated period is recomputed from the immutable event log (by recorded period membership) and re-rated: <code>✓ matches</code> with an identical hash, in milliseconds.</sub></td>
+<td><img src="docs/assets/04-webhooks.png" alt="Webhook deliveries and signed receipts in the demo sink"><br><sub><b>Reliable fan-out.</b> Outbox → Kafka → durable deliveries with attempts and last status; the built-in sink verifies every HMAC-SHA256 signature.</sub></td>
+</tr>
+<tr>
+<td><img src="docs/assets/05-entitlement.png" alt="Entitlement check: ALLOW then DENY at the hard limit"><br><sub><b>Real-time entitlements.</b> A capped <i>starter</i> customer: 1 more call is allowed; 6,000 would exceed the 5,000 hard limit and is denied with usage, limit and remaining.</sub></td>
+<td><img src="docs/assets/06-grafana-crash-drill.png" alt="Grafana: metering outcomes and consumer lag during the crash drill"><br><sub><b>Crash drill in Grafana.</b> The worker JVM is killed under 500 events/s: the gap is the outage, Compose restarts the container, <i>stored</i> spikes as the backlog drains, duplicates blip once (the redelivered batch) and never double-count. The lag panel shows Kafka's <code>records-lag-max</code>, a windowed maximum, so it plateaus for its 60 s window after recovery.</sub></td>
+</tr>
+</table>
+
+<details>
+<summary>Distributed trace of one ingest request (Jaeger)</summary>
+
+![Jaeger trace: HTTP → 100 Kafka produces](docs/assets/jaeger-trace.png)
+
+</details>
 
 Measured on a laptop (Apple M3, Docker Desktop) — details and raw outputs in
 [docs/performance](docs/performance/README.md):
 
 | Scenario | Result |
 |---|---|
-| Simulator: 500 events/s for 90 s with 5 % duplicates, 2 % late, 1 % invalid; **worker killed at t+25 s, restarted at t+45 s** | 49,104 events accepted, 0 errors; lag peaked at 4,142 and drained in seconds; **all 20 customers' totals matched the simulator's expected totals exactly** (the injected "late" events predated the fresh demo subscriptions and were rejected with a reason; the late-event-to-adjustment path is covered by `BillingLifecycleIT`) |
-| k6 ingest, 2,000 events/s for 60 s | 125,967 events accepted, 0 failures, HTTP p50 10 ms / p99 22.8 ms; a single worker counted the full load |
+| Simulator: 500 events/s for 90 s with 5 % duplicates, 2 % late, 1 % invalid; **worker JVM killed at t+25 s, restarted by Compose** | 49,104 events accepted, 0 errors; lag peaked at 3,073 and drained in seconds; **all 20 customers' totals matched the simulator's expected totals exactly** (the injected "late" events predated the fresh demo subscriptions and were rejected with a reason; the late-event-to-adjustment path is covered by `BillingLifecycleIT`) |
+| k6 ingest, 2,000 events/s for 60 s | 126,152 events accepted, 0 failures, HTTP p50 9.4 ms / p99 16.8 ms; a single worker counted the full load |
 | k6 entitlement checks, 500 req/s for 60 s | 0 failures, p50 0.27 ms / p99 6.05 ms |
-| Test suite (`mvn verify`) | 41 unit/property/architecture tests + 36 integration tests on real PostgreSQL and Kafka, all passing in 48 s |
+| Test suite (`mvn verify`) | 41 unit/property/architecture tests + 37 integration tests on real PostgreSQL and Kafka, all passing locally and in CI |
 
 ```
 === Truth check (waiting for the consumer to drain) ===
@@ -258,8 +285,6 @@ HTTP → Kafka → consumer → JDBC, structured logs with tenant and trace ids,
 Kafka contributor, and a provisioned Grafana dashboard. Metric catalogue and alerting suggestions in
 [docs/operations/observability.md](docs/operations/observability.md); runbooks in
 [docs/operations/runbooks.md](docs/operations/runbooks.md).
-
-![Grafana dashboard](docs/assets/grafana.png)
 
 ## Security
 

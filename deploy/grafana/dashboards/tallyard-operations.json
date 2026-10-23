@@ -453,8 +453,8 @@
     },
     {
       "type": "timeseries",
-      "title": "Consumer lag per partition",
-      "description": "Grows while the worker is down or slower than ingest; must drain to zero after recovery.",
+      "title": "Consumer lag (max per consumer thread)",
+      "description": "kafka_consumer_fetch_manager_records_lag_max per consumer client: grows while the worker is down or slower than ingest; must drain to zero after recovery. Gaps are the outage itself (no consumer to report).",
       "gridPos": {
         "x": 12,
         "y": 12,
@@ -491,8 +491,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "kafka_consumer_fetch_manager_records_lag{client_id=~\".*metering.*\"}",
-          "legendFormat": "p{{partition}} ({{role}})",
+          "expr": "max by (client_id) (kafka_consumer_fetch_manager_records_lag_max{client_id=~\".*metering.*\"})",
+          "legendFormat": "{{client_id}}",
           "refId": "A"
         }
       ]
