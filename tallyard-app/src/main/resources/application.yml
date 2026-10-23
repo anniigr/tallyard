@@ -1,0 +1,157 @@
+spring:
+  application:
+    name: tallyard
+  main:
+    banner-mode: off
+  datasource:
+    url: ${TALLYARD_DB_URL:jdbc:postgresql://localhost:5432/tallyard}
+    username: ${TALLYARD_DB_USER:tallyard}
+    password: ${TALLYARD_DB_PASSWORD:tallyard}
+    hikari:
+      maximum-pool-size: ${TALLYARD_DB_POOL_SIZE:20}
+      minimum-idle: 2
+      connection-timeout: 5000
+      validation-timeout: 2000
+      pool-name: tallyard
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc.batch_size: 100
+        order_inserts: true
+        order_updates: true
+        jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  kafka:
+    bootstrap-servers: ${TALLYARD_KAFKA_BOOTSTRAP:localhost:9092}
+    producer:
+      acks: all
+      retries: 10
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+        delivery.timeout.ms: 15000
+        request.timeout.ms: 5000
+        linger.ms: 5
+        batch.size: 65536
+        compression.type: lz4
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      max-poll-records: 500
+      properties:
+        max.poll.interval.ms: 300000
+        session.timeout.ms: 30000
+        fetch.min.bytes: 1
+        fetch.max.wait.ms: 100
+    listener:
+      type: batch
+      ack-mode: manual_immediate
+      concurrency: ${TALLYARD_CONSUMER_CONCURRENCY:3}
+      observation-enabled: true
+    template:
+      observation-enabled: true
+  threads:
+    virtual:
+      enabled: true
+  mvc:
+    problemdetails:
+      enabled: true
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: ${TALLYARD_PORT:8080}
+  shutdown: graceful
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  server:
+    port: ${TALLYARD_MANAGEMENT_PORT:9091}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db,kafka
+  info:
+    build:
+      enabled: true
+    git:
+      enabled: false
+  metrics:
+    tags:
+      application: tallyard
+      role: ${TALLYARD_ROLE:all}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true   # histogram buckets so Grafana can compute p99 per endpoint
+  tracing:
+    sampling:
+      probability: ${TALLYARD_TRACE_SAMPLING:1.0}
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${TALLYARD_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+
+logging:
+  structured:
+    format:
+      console: ${TALLYARD_LOG_FORMAT:}
+  level:
+    io.tallyard: INFO
+    org.apache.kafka: WARN
+    org.hibernate.SQL: WARN
+
+tallyard:
+  role: ${TALLYARD_ROLE:all}            # all | api | worker
+  bootstrap-token: ${TALLYARD_BOOTSTRAP_TOKEN:}   # required to create tenants; empty disables the endpoint
+  encryption-key: ${TALLYARD_ENCRYPTION_KEY:}     # base64 32 bytes; required for webhook secrets
+  topics:
+    usage-events: usage.events.v1
+    usage-events-dlt: usage.events.v1.dlt
+    billing-events: billing.events.v1
+    partitions: ${TALLYARD_TOPIC_PARTITIONS:6}
+  ingestion:
+    max-batch-size: 1000
+    max-future-skew: PT5M
+    rate-limit-per-key-per-second: ${TALLYARD_INGEST_RATE_LIMIT:5000}
+    kafka-send-timeout: PT5S
+  metering:
+    consumer-group: tallyard-metering
+  billing:
+    scheduler-interval: PT5S
+    auto-finalize-after: ${TALLYARD_AUTO_FINALIZE_AFTER:PT1H}
+  entitlements:
+    cache-ttl: PT2S
+    cache-max-size: 100000
+  outbox:
+    poll-interval: PT1S
+    batch-size: 200
+    max-attempts: 20
+  webhooks:
+    poll-interval: PT2S
+    batch-size: 50
+    max-attempts: 8
+    initial-backoff: PT5S
+    request-timeout: PT5S
+  demo:
+    enabled: ${TALLYARD_DEMO_ENABLED:false}
+    admin-key: ${TALLYARD_DEMO_ADMIN_KEY:}
+    period-minutes: ${TALLYARD_DEMO_PERIOD_MINUTES:10}
+    grace-seconds: ${TALLYARD_DEMO_GRACE_SECONDS:30}
+    customers: ${TALLYARD_DEMO_CUSTOMERS:20}
+    webhook-url: ${TALLYARD_DEMO_WEBHOOK_URL:http://localhost:8080/v1/webhook-sink}
