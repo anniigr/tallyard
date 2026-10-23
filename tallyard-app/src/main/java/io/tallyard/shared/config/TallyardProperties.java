@@ -28,7 +28,7 @@ public record TallyardProperties(
 
     public record Entitlements(Duration cacheTtl, long cacheMaxSize) {}
 
-    public record Outbox(Duration pollInterval, int batchSize, int maxAttempts) {}
+    public record Outbox(Duration pollInterval, int batchSize) {}
 
     public record Webhooks(
             Duration pollInterval, int batchSize, int maxAttempts, Duration initialBackoff, Duration requestTimeout) {}

@@ -19,7 +19,9 @@ from raw events and the plan, not from a snapshot nobody can re-check.
 - Two usage sources exist behind one SPI (`billing.UsageSource`):
   - **buckets** — hourly pre-aggregates, used when rating (fast);
   - **event log** — recomputed with SQL that mirrors the consumer's filters (acceptance window,
-    plain-decimal grammar), read *as of* `rated_at` (`ingested_at < rated_at`).
+    plain-decimal grammar) over the events whose recorded `period_id` is this period. The consumer
+    writes that membership in the same transaction as the buckets (migration `V2`), so replay is
+    independent of consumer lag and wall-clock timestamps; late events carry no membership.
 - `POST /v1/periods/{id}/replay` re-derives quantities from the log, re-rates, and compares lines and
   hash with the stored invoice. `matches=true` is a proof that buckets, log and rating agree; a diff
   points at exactly which line drifted.

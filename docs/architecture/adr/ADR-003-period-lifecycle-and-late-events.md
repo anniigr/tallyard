@@ -36,7 +36,9 @@ For an event whose `occurredAt` falls in a settled period:
 1. within the meter's acceptance window → stored in the log and recorded as a `usage_adjustment`
    against the subscription's current `OPEN` period, referencing the original period;
 2. older than the acceptance window → rejected with `OUTSIDE_ACCEPTANCE_WINDOW`;
-3. `UNIQUE_COUNT` meters cannot be adjusted additively → rejected with a reason, kept in the log.
+3. only additive meters (`SUM`, `COUNT`) can be carried forward; `MIN`/`MAX`/`LAST`/`UNIQUE_COUNT`
+   late events are rejected with `LATE_NOT_ADJUSTABLE` and kept in the log — adding a late peak to
+   a settled peak would misprice it.
 
 Adjustments are priced marginally when the open period is rated: `rate(quantity + adjustment) −
 rate(quantity)` under the current component, shown as a separate `ADJUSTMENT` line with its own
@@ -50,10 +52,12 @@ adjustment lines) and keeps every invoice immutable and reproducible.
 
 ## Consequences
 
-- Replay of a settled period must read the log *as of* the rating time (ADR-004); otherwise late
-  events would make a correct invoice look wrong.
+- Replay of a settled period reads the events attributed to it (ADR-004); late events carry no
+  attribution, so they cannot make a correct invoice look wrong.
 - Rating waits for in-flight metering batches on the same period — bounded by one batch duration
-  (tens of milliseconds).
+  (tens of milliseconds). Events still queued in Kafka when the grace window ends are not lost: they
+  arrive after rating and become adjustments on the next period, so the grace window should be
+  longer than the worst consumer lag an operator is willing to bill one period late.
 - Operators can force `rate` on an `OPEN` period (demo/incident use); the successor opens at the
   original end time, so an open period may start in the future. Lookups of "the open period" must
   therefore go by state, not by time (`lockOpenPeriod`).

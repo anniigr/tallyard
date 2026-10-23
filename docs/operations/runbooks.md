@@ -86,6 +86,7 @@ API with their original ids (idempotent).
 | `INVALID_VALUE` | Property missing / not a plain decimal | Fix the producer; see `GET /v1/rejections` detail |
 | `OUTSIDE_ACCEPTANCE_WINDOW` | Older than the meter window | Policy; widen `acceptanceWindow` only for new meters |
 | `NO_PERIOD` / `NO_OPEN_PERIOD` | Lifecycle gap | Should not happen while a subscription is active; check R6 |
+| `LATE_NOT_ADJUSTABLE` | Late event for a MIN/MAX/LAST/UNIQUE_COUNT meter | By design; the event is in the log for audit |
 
 ## R6. A period is stuck
 

@@ -53,6 +53,9 @@ work can be resumed coherently. Dates are real (2026-10-23).*
 | 2026-10-23 11:30 | `mvn test -pl tallyard-app` | 41 tests, 0 failures (unit, property, Modulith, ArchUnit) |
 | 2026-10-23 11:40 | `mvn verify -pl tallyard-app` | 36 ITs: 25 passed, 11 failed → root causes above |
 | 2026-10-23 11:56 | `mvn verify -pl tallyard-app` after fixes | **41 unit + 36 integration tests, 0 failures, 47.7 s** (Testcontainers PostgreSQL 17 + Kafka 4.1) |
+| 2026-10-23 12:16 | GitHub Actions on `develop` | green: build + 77 tests, Docker image, gitleaks |
+| 2026-10-23 12:30 | Compose stack rebuilt after review fixes; 20 demo periods rated via API | 20 invoices, prepaid customers show credits applied, `tallyard_billing_failures_total = 0` |
+| 2026-10-23 12:45 | `mvn verify` after second review batch | see latest entry below |
 
 ## Open items / next actions
 

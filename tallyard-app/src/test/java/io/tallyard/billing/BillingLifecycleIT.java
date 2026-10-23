@@ -109,17 +109,26 @@ class BillingLifecycleIT extends AbstractIntegrationTest {
         BigDecimal ratedCalls = invoice.get("lines").get(0).get("quantity").decimalValue();
         assertThat(ratedCalls).isEqualByComparingTo("10");
 
-        // An event whose occurredAt falls inside the now-RATED period.
+        // Events whose occurredAt falls inside the now-RATED period: additive meters become adjustments,
+        // a MAX meter cannot be carried forward and is rejected with a reason.
         e.ingest()
                 .ingest(List.of(
-                        ApiClient.event("late-1", "request", "late", e.now().minusSeconds(1), Map.of("tokens", 50))));
+                        ApiClient.event("late-1", "request", "late", e.now().minusSeconds(1), Map.of("tokens", 50)),
+                        ApiClient.event("late-gb", "storage", "late", e.now().minusSeconds(1), Map.of("gb", 99))));
         UUID open = e.admin().openPeriodId("late");
         await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
             JsonNode adjustments = e.admin().getJson("/v1/periods/" + open + "/adjustments");
             assertThat(adjustments).hasSize(2); // api_calls (+1) and tokens (+50)
             assertThat(adjustments.get(0).get("originalPeriodId").asString()).isEqualTo(first.toString());
         });
-        // Rated period is untouched (buckets frozen) and still reproducible as of its rating time.
+        await().atMost(Duration.ofSeconds(30)).untilAsserted(() -> {
+            List<String> reasons = new ArrayList<>();
+            e.admin()
+                    .getJson("/v1/rejections?limit=20")
+                    .forEach(r -> reasons.add(r.get("reason").asString()));
+            assertThat(reasons).contains("LATE_NOT_ADJUSTABLE");
+        });
+        // Rated period is untouched (buckets frozen) and still reproducible from its attributed events.
         assertThat(e.admin().usage(first).get("api_calls")).isEqualByComparingTo("10");
         assertThat(e.admin()
                         .postJson("/v1/periods/" + first + "/replay", null)

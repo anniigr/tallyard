@@ -11,7 +11,7 @@ names the mechanism in code and the test or procedure that exercises it.*
 | 202 means durable | Producer `acks=all`, idempotent, awaited before responding | `IngestApiIT`, Kafka-outage procedure |
 | Usage is never written into a settled period | `FOR SHARE` (metering) vs `FOR UPDATE` (rating) on the period row; state check inside the metering transaction | `BillingLifecycleIT.lateEvent…`, ADR-003 |
 | Exactly one invoice per period | `FOR UPDATE SKIP LOCKED` claim + `@Version` + `invoice_draft.period_id UNIQUE` | `BillingLifecycleIT.concurrentRating…` |
-| Invoices are reproducible from raw events | Pure `RatingEngine`; event log read as-of `rated_at`; hash comparison | `RatingEngineTest`, `RatingEnginePropertyTest`, `BillingLifecycleIT` replay assertions |
+| Invoices are reproducible from raw events | Pure `RatingEngine`; event log read by recorded period membership; hash comparison | `RatingEngineTest`, `RatingEnginePropertyTest`, `BillingLifecycleIT` replay assertions |
 | Prepaid balance never negative | Grants locked `FOR UPDATE` in deterministic order; `CHECK (amount_consumed <= amount_granted)` | `CreditLedgerConcurrencyIT` |
 | Domain events are published at least once, in order per aggregate, only for committed transactions | Outbox table written in-transaction (`MANDATORY`), `SKIP LOCKED` publisher, ack-then-mark | `OutboxPublicationIT` |
 | Webhooks: at-most-one delivery row per (endpoint, event); retries with backoff; dead-letter after N; manual retry | `webhook_delivery` unique key; dispatcher; breaker | `WebhookDeliveryIT` |
@@ -24,7 +24,12 @@ names the mechanism in code and the test or procedure that exercises it.*
 - No deduplication of events whose client generated a *new* id on retry.
 - No read-your-writes for entitlements (bounded staleness instead).
 - No multi-region or multi-primary operation.
-- `UNIQUE_COUNT` meters cannot absorb late events (rejected with a reason).
+- `MIN`/`MAX`/`LAST`/`UNIQUE_COUNT` meters cannot absorb late events (rejected with `LATE_NOT_ADJUSTABLE`).
+- Outbox ordering per aggregate holds with one publisher instance; with several concurrent
+  publishers or after a failed batch, events of one aggregate can be published out of order
+  (consumers must treat `occurredAt`/state as authoritative, which the webhook payloads carry).
+- Usage still queued in Kafka when a period's grace window ends is billed on the next period as an
+  adjustment, not on the period it occurred in.
 
 ## 3. Component failure matrix
 

@@ -8,12 +8,13 @@ import io.tallyard.webhooks.WebhookRegistry;
 import java.net.URI;
 import java.security.SecureRandom;
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Limit;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,16 +26,19 @@ class WebhookService implements WebhookRegistry {
     private final WebhookEndpointRepository endpoints;
     private final WebhookDeliveryRepository deliveries;
     private final SecretEncryptor encryptor;
+    private final JdbcTemplate jdbc;
     private final Clock clock;
 
     WebhookService(
             WebhookEndpointRepository endpoints,
             WebhookDeliveryRepository deliveries,
             SecretEncryptor encryptor,
+            JdbcTemplate jdbc,
             Clock clock) {
         this.endpoints = endpoints;
         this.deliveries = deliveries;
         this.encryptor = encryptor;
+        this.jdbc = jdbc;
         this.clock = clock;
     }
 
@@ -72,27 +76,34 @@ class WebhookService implements WebhookRegistry {
                 .deactivate();
     }
 
-    /** Fan-out: one durable delivery per subscribed endpoint; the unique key makes redelivery of the Kafka record a no-op. */
+    /**
+     * Fan-out: one durable delivery per subscribed endpoint. {@code ON CONFLICT DO NOTHING} on the
+     * (endpoint, outbox event) key makes redelivery of the Kafka record a no-op without aborting the
+     * transaction the way a caught constraint violation would.
+     */
     @Transactional
     int enqueue(OutboxMessage message) {
         int created = 0;
+        Instant now = clock.instant();
         for (WebhookEndpoint endpoint : endpoints.findByTenantIdAndActiveTrue(message.tenantId())) {
             if (!endpoint.accepts(message.eventType())) {
                 continue;
             }
-            try {
-                deliveries.saveAndFlush(new WebhookDelivery(
-                        Ids.newId(clock),
-                        message.tenantId(),
-                        endpoint.getId(),
-                        message.eventId(),
-                        message.eventType(),
-                        envelope(message),
-                        clock.instant()));
-                created++;
-            } catch (DataIntegrityViolationException duplicate) {
-                // already enqueued by an earlier delivery of the same Kafka record
-            }
+            created += jdbc.update(
+                    """
+                    INSERT INTO webhook_delivery (id, tenant_id, endpoint_id, outbox_event_id, event_type, payload, state,
+                                                  attempts, next_attempt_at, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?::jsonb, 'PENDING', 0, ?, ?)
+                    ON CONFLICT (endpoint_id, outbox_event_id) DO NOTHING
+                    """,
+                    Ids.newId(clock),
+                    message.tenantId(),
+                    endpoint.getId(),
+                    message.eventId(),
+                    message.eventType(),
+                    envelope(message),
+                    java.sql.Timestamp.from(now),
+                    java.sql.Timestamp.from(now));
         }
         return created;
     }

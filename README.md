@@ -64,7 +64,7 @@ ALL 20 CUSTOMERS MATCH: Tallyard's live totals equal the simulator's expected to
   constraint. Every line carries a tier-by-tier breakdown; every invoice carries a reproducibility
   hash.
 - **Replay proof** — `POST /v1/periods/{id}/replay` recomputes a rated period from the immutable
-  event log as of the rating time and reports whether it matches.
+  event log (each counted event records the period it was folded into) and reports whether it matches.
 - **Entitlements** — allow/deny decisions with usage, limit, remaining and estimated remaining credit,
   from a snapshot cache with an explicit staleness bound.
 - **Outbox and webhooks** — transactional outbox → `billing.events.v1` → durable, HMAC-signed
@@ -104,7 +104,7 @@ Modules: `tenancy`, `catalog`, `ingestion`, `metering`, `billing`, `credits`, `e
 |---|---|---|
 | Count exactly once under retries, redelivery, crashes | Unique `(tenant_id, event_id)`; multi-row insert-returning; ack after commit | `metering/internal/UsageEventStore`, `MeteringService`, `UsageEventConsumer`; `ConsumerRedeliveryIT`; [ADR-002](docs/architecture/adr/ADR-002-effectively-once-accounting.md) |
 | Never write usage into a settled period | `FOR SHARE` (metering) vs `FOR UPDATE` (rating) on the period row; `@Version`; partial unique index for "one OPEN period" | `billing/internal/BillingRepositories`, `BillingService`; [ADR-003](docs/architecture/adr/ADR-003-period-lifecycle-and-late-events.md) |
-| Late events after an invoice exists | Adjustments carried into the open period, priced marginally; buckets frozen; replay as-of rating time | `MeteringService.count`, `RatingEngine.rate` |
+| Late events after an invoice exists | Adjustments carried into the open period, priced marginally; buckets frozen; replay by recorded membership | `MeteringService.count`, `RatingEngine.rate` |
 | Exactly one invoice per period with concurrent schedulers | `FOR UPDATE SKIP LOCKED` work queue + optimistic version + unique invoice per period | `BillingScheduler`, `BillingLifecycleIT.concurrentRating…` |
 | Provable invoices | Pure `RatingEngine` (no clock, no I/O — enforced by ArchUnit), tier breakdowns, SHA-256 hash, log replay | `billing/internal/RatingEngine`, `RatingEnginePropertyTest`; [ADR-004](docs/architecture/adr/ADR-004-deterministic-rating-and-replay.md) |
 | Prepaid balance never negative | Grants locked in deterministic order; `CHECK (amount_consumed <= amount_granted)` | `credits/internal/CreditService`; `CreditLedgerConcurrencyIT` |
@@ -292,7 +292,7 @@ Full comparison of selected and rejected technologies:
 - Single PostgreSQL primary; `usage_event` is not yet partitioned (the path — monthly range
   partitions, then tenant sharding — is documented).
 - Entitlement decisions can lag usage by up to the cache TTL; rate limiting is per node.
-- `UNIQUE_COUNT` meters cannot absorb late events (rejected with a reason).
+- `MIN`/`MAX`/`LAST`/`UNIQUE_COUNT` meters cannot absorb late events (rejected with `LATE_NOT_ADJUSTABLE`).
 - Webhook URLs are not checked against an SSRF allow-list; no dependency/image vulnerability scanner
   in CI; encryption key rotation is not implemented.
 - Monthly periods are calendar months in UTC; no per-tenant time zones; one currency per plan.

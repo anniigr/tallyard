@@ -136,7 +136,7 @@ sequenceDiagram
   P-->>M: only newly inserted rows
   M->>P: SELECT billing_period … FOR SHARE (per subscription)
   M->>M: resolve meters, customer, subscription; extract values; fold per (period, meter, customer, hour)
-  M->>P: INSERT meter_bucket … ON CONFLICT DO UPDATE (batched)
+  M->>P: INSERT meter_bucket … ON CONFLICT DO UPDATE (batched); UPDATE usage_event.period_id
   M->>P: INSERT usage_adjustment / rejected_event (batched)
   M->>P: COMMIT
   W->>K: acknowledge offsets

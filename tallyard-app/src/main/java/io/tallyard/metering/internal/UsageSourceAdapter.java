@@ -15,7 +15,6 @@ import io.tallyard.shared.error.NotFoundException;
 import io.tallyard.shared.money.Decimals;
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,11 +38,11 @@ class UsageSourceAdapter implements UsageSource, UsageQueries {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<UUID, BigDecimal> quantitiesFromBuckets(Window w, List<MeterView> meters, Instant asOf) {
+    public Map<UUID, BigDecimal> quantitiesFromBuckets(Window w, List<MeterView> meters) {
         Map<UUID, BigDecimal> out = new LinkedHashMap<>();
         for (MeterView meter : meters) {
             if (!meter.aggregation().isNumeric()) {
-                out.put(meter.id(), Decimals.quantity(store.quantityFromLog(w, meter, asOf)));
+                out.put(meter.id(), Decimals.quantity(store.quantityFromLog(w, meter)));
                 continue;
             }
             UsageEventStore.BucketTotals t = store.bucketTotals(w.periodId(), meter.id(), w.customerId());
@@ -62,10 +61,10 @@ class UsageSourceAdapter implements UsageSource, UsageQueries {
 
     @Override
     @Transactional(readOnly = true)
-    public Map<UUID, BigDecimal> quantitiesFromEventLog(Window w, List<MeterView> meters, Instant asOf) {
+    public Map<UUID, BigDecimal> quantitiesFromEventLog(Window w, List<MeterView> meters) {
         Map<UUID, BigDecimal> out = new LinkedHashMap<>();
         for (MeterView meter : meters) {
-            out.put(meter.id(), Decimals.quantity(store.quantityFromLog(w, meter, asOf)));
+            out.put(meter.id(), Decimals.quantity(store.quantityFromLog(w, meter)));
         }
         return out;
     }
@@ -95,7 +94,7 @@ class UsageSourceAdapter implements UsageSource, UsageQueries {
                 customer.externalId(),
                 period.startsAt(),
                 period.endsAt());
-        Map<UUID, BigDecimal> quantities = quantitiesFromBuckets(w, meters, clock.instant());
+        Map<UUID, BigDecimal> quantities = quantitiesFromBuckets(w, meters);
         return meters.stream()
                 .map(m -> new MeterUsage(
                         m.id(),

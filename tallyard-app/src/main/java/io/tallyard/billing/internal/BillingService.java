@@ -169,7 +169,7 @@ class BillingService implements BillingPeriods, BillingQueries {
                     "period.illegal_transition", "Only a CLOSING period can be rated; period is " + period.getState());
         }
         RatingInputs in = inputs(period);
-        Map<UUID, BigDecimal> quantities = usage.quantitiesFromBuckets(in.window(), in.meters(), now);
+        Map<UUID, BigDecimal> quantities = usage.quantitiesFromBuckets(in.window(), in.meters());
         List<UsageSource.AdjustmentView> adjustments = usage.adjustments(period.getId());
         RatingEngine.Result rated = RatingEngine.rate(in.plan(), quantities, adjustments);
 
@@ -248,8 +248,7 @@ class BillingService implements BillingPeriods, BillingQueries {
         InvoiceDraft stored = invoices.findByPeriodIdWithLines(periodId)
                 .orElseThrow(() -> new NotFoundException("Invoice for period", periodId));
         RatingInputs in = inputs(period);
-        Instant asOf = period.getRatedAt();
-        Map<UUID, BigDecimal> fromLog = usage.quantitiesFromEventLog(in.window(), in.meters(), asOf);
+        Map<UUID, BigDecimal> fromLog = usage.quantitiesFromEventLog(in.window(), in.meters());
         RatingEngine.Result replayed = RatingEngine.rate(in.plan(), fromLog, usage.adjustments(periodId));
 
         List<String> differences = new ArrayList<>();
@@ -401,13 +400,13 @@ class BillingService implements BillingPeriods, BillingQueries {
         BillingPeriod period =
                 periods.findById(periodId).orElseThrow(() -> new NotFoundException("Billing period", periodId));
         RatingInputs in = inputs(period);
-        Map<UUID, BigDecimal> quantities = usage.quantitiesFromBuckets(in.window(), in.meters(), clock.instant());
+        Map<UUID, BigDecimal> quantities = usage.quantitiesFromBuckets(in.window(), in.meters());
         return RatingEngine.rate(in.plan(), quantities, usage.adjustments(periodId))
                 .subtotal();
     }
 
     @Transactional(readOnly = true)
-    BillingPeriodView owned(UUID tenantId, UUID periodId, boolean unused) {
+    BillingPeriodView view(UUID tenantId, UUID periodId) {
         return owned(tenantId, periodId).toView();
     }
 

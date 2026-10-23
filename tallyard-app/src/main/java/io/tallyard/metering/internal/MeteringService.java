@@ -156,6 +156,7 @@ class MeteringService {
             BillingPeriodView p = period.get();
             if (p.state().acceptsUsage()) {
                 batch.accumulate(p, meter, customer.get(), m, value.get());
+                batch.attributed.put(usageEventId, p.id());
             } else {
                 Optional<BillingPeriodView> open =
                         batch.openPeriod(subscription.get().id());
@@ -167,11 +168,15 @@ class MeteringService {
                                     + " and no open period exists");
                     continue;
                 }
-                if (meter.aggregation().isNumeric()) {
+                if (meter.aggregation().isAdditive()) {
                     batch.adjust(open.get(), p, subscription.get(), meter, usageEventId, m, value.get());
                 } else {
-                    // UNIQUE_COUNT cannot be adjusted additively; the log keeps the event for audit.
-                    batch.reject(m, RejectionReason.NO_OPEN_PERIOD, "late UNIQUE_COUNT events are not re-attributable");
+                    // MIN/MAX/LAST/UNIQUE_COUNT cannot be carried forward additively; kept in the log for audit.
+                    batch.reject(
+                            m,
+                            RejectionReason.LATE_NOT_ADJUSTABLE,
+                            "meter '" + meter.code() + "' (" + meter.aggregation()
+                                    + ") cannot absorb late events; period " + p.id() + " is " + p.state());
                 }
             }
         }
@@ -187,6 +192,7 @@ class MeteringService {
         final Map<UUID, List<BillingPeriodView>> periodsBySubscription = new HashMap<>();
         final Map<UUID, Optional<BillingPeriodView>> openBySubscription = new HashMap<>();
         final Map<String, UsageEventStore.BucketDelta> deltas = new LinkedHashMap<>();
+        final Map<UUID, UUID> attributed = new LinkedHashMap<>();
         final List<UsageEventStore.Adjustment> adjustments = new ArrayList<>();
         final List<UsageEventStore.Rejection> rejections = new ArrayList<>();
 
@@ -316,6 +322,7 @@ class MeteringService {
                 return c != 0 ? c : a.bucketStart().compareTo(b.bucketStart());
             });
             store.upsertBuckets(sorted);
+            store.attributeToPeriod(attributed);
             store.insertAdjustments(adjustments);
             store.insertRejections(rejections);
             if (!rejections.isEmpty() || late > 0) {

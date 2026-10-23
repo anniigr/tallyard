@@ -15,6 +15,7 @@ import java.util.Currency;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -90,8 +91,9 @@ class CreditService implements CreditLedger {
         return grants.existsByCustomerIdAndCurrency(customerId, currency.getCurrencyCode());
     }
 
+    /** MANDATORY: ledger entries must share the rating transaction that writes the invoice. */
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.MANDATORY)
     public Application apply(UUID tenantId, UUID customerId, Money amount, UUID invoiceId, Instant at) {
         if (!amount.isPositive()) {
             return new Application(Money.zero(amount.currency()), List.of());

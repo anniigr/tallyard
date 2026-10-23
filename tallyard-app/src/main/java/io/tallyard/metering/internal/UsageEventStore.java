@@ -135,6 +135,18 @@ class UsageEventStore {
         });
     }
 
+    /** Marks events as counted into a period (membership used by replay). */
+    void attributeToPeriod(Map<UUID, UUID> eventToPeriod) {
+        if (eventToPeriod.isEmpty()) {
+            return;
+        }
+        List<Map.Entry<UUID, UUID>> entries = new ArrayList<>(eventToPeriod.entrySet());
+        jdbc.batchUpdate("UPDATE usage_event SET period_id = ? WHERE id = ?", entries, entries.size(), (ps, e) -> {
+            ps.setObject(1, e.getValue());
+            ps.setObject(2, e.getKey());
+        });
+    }
+
     record Adjustment(
             UUID tenantId,
             UUID subscriptionId,
@@ -229,24 +241,19 @@ class UsageEventStore {
     }
 
     /**
-     * Recomputes one meter's quantity straight from the immutable log, applying the same filters the
-     * consumer applied when it counted: acceptance window and the plain-decimal grammar.
+     * Recomputes one meter's quantity straight from the immutable log using period membership
+     * ({@code usage_event.period_id}, written by the consumer in the same transaction as the buckets),
+     * applying the same value grammar the consumer applied. Late events carry no membership (they are
+     * adjustments), so replay of a settled period is stable regardless of consumer lag.
      */
-    BigDecimal quantityFromLog(UsageSource.Window w, MeterView meter, Instant asOf) {
+    BigDecimal quantityFromLog(UsageSource.Window w, MeterView meter) {
         String base = """
                 FROM usage_event
-                WHERE tenant_id = ? AND subject = ? AND event_type = ?
-                  AND occurred_at >= ? AND occurred_at < ? AND ingested_at < ?
+                WHERE tenant_id = ? AND period_id = ? AND event_type = ?
                   AND ingested_at - occurred_at <= make_interval(secs => ?)
                 """;
-        List<Object> args = new ArrayList<>(List.of(
-                w.tenantId(),
-                w.subject(),
-                meter.eventType(),
-                Timestamp.from(w.start()),
-                Timestamp.from(w.end()),
-                Timestamp.from(asOf),
-                (double) meter.acceptanceWindow().toSeconds()));
+        List<Object> args = new ArrayList<>(List.of(w.tenantId(), w.periodId(), meter.eventType(), (double)
+                meter.acceptanceWindow().toSeconds()));
         String numericFilter = " AND (properties->>?) ~ '^-?[0-9]{1,19}(\\.[0-9]{1,6})?$'";
         String select;
         switch (meter.aggregation()) {

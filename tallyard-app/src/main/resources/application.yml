@@ -141,7 +141,6 @@ tallyard:
   outbox:
     poll-interval: PT1S
     batch-size: 200
-    max-attempts: 20
   webhooks:
     poll-interval: PT2S
     batch-size: 50

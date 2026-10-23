@@ -50,7 +50,7 @@ class BillingController {
     @GetMapping("/periods/{id}")
     @PreAuthorize("@scopes.has('READ')")
     BillingPeriodView period(@PathVariable UUID id) {
-        return billing.owned(TenantContext.tenantId(), id, true);
+        return billing.view(TenantContext.tenantId(), id);
     }
 
     record EstimateResponse(UUID periodId, String currency, BigDecimal subtotal) {}
@@ -59,7 +59,7 @@ class BillingController {
     @GetMapping("/periods/{id}/estimate")
     @PreAuthorize("@scopes.has('READ')")
     EstimateResponse estimate(@PathVariable UUID id) {
-        billing.owned(TenantContext.tenantId(), id, true);
+        billing.view(TenantContext.tenantId(), id);
         Money m = billing.liveEstimate(id);
         return new EstimateResponse(id, m.currencyCode(), m.rounded().amount());
     }
@@ -99,7 +99,7 @@ class BillingController {
     @GetMapping("/periods/{id}/invoice")
     @PreAuthorize("@scopes.has('READ')")
     InvoiceView invoice(@PathVariable UUID id) {
-        billing.owned(TenantContext.tenantId(), id, true);
+        billing.view(TenantContext.tenantId(), id);
         return billing.invoiceForPeriod(id).orElseThrow(() -> new NotFoundException("Invoice for period", id));
     }
 

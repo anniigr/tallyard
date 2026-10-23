@@ -106,7 +106,16 @@ class UsageEventConsumer {
                         "ty-dlt-source",
                         (record.topic() + "-" + record.partition() + "@" + record.offset())
                                 .getBytes(StandardCharsets.UTF_8)));
-        kafka.send(dlt);
+        try {
+            // Wait for the broker: if the dead-letter publish fails, the batch fails and is retried;
+            // the poison record must never exist only in the rejection table.
+            kafka.send(dlt).get(10, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted while dead-lettering", e);
+        } catch (java.util.concurrent.ExecutionException | java.util.concurrent.TimeoutException e) {
+            throw new IllegalStateException("Dead-letter publish failed", e);
+        }
     }
 
     private static UUID tenantHeader(ConsumerRecord<String, String> record) {

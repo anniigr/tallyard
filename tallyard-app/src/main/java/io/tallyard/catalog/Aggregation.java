@@ -17,4 +17,9 @@ public enum Aggregation {
     public boolean isNumeric() {
         return this != UNIQUE_COUNT;
     }
+
+    /** Only additive aggregations can carry late usage forward as an adjustment. */
+    public boolean isAdditive() {
+        return this == SUM || this == COUNT;
+    }
 }

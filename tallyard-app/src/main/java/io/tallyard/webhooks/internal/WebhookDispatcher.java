@@ -13,9 +13,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +49,13 @@ class WebhookDispatcher {
     private final Clock clock;
     private final TallyardProperties.Webhooks config;
     private final CircuitBreakerRegistry breakers;
-    private final Map<UUID, WebhookEndpoint> endpointCache = new ConcurrentHashMap<>();
+    /** Short-lived so URL/secret changes and deactivation are picked up without a restart. */
+    private final com.github.benmanes.caffeine.cache.Cache<UUID, WebhookEndpoint> endpointCache =
+            com.github.benmanes.caffeine.cache.Caffeine.newBuilder()
+                    .maximumSize(10_000)
+                    .expireAfterWrite(Duration.ofSeconds(30))
+                    .build();
+
     private final Counter delivered;
     private final Counter failed;
     private final Counter dead;
@@ -116,7 +120,7 @@ class WebhookDispatcher {
 
     private void attempt(WebhookDelivery d) {
         Instant now = clock.instant();
-        WebhookEndpoint endpoint = endpointCache.computeIfAbsent(
+        WebhookEndpoint endpoint = endpointCache.get(
                 d.getEndpointId(), id -> endpoints.findById(id).orElse(null));
         if (endpoint == null || !endpoint.isActive()) {
             d.failed(null, "endpoint missing or inactive", now, now, 0);

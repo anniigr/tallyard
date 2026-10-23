@@ -17,5 +17,7 @@ public enum RejectionReason {
     /** No billing period covers the event time (should not happen while a subscription is active). */
     NO_PERIOD,
     /** Late event, but the subscription has no open period to carry the adjustment. */
-    NO_OPEN_PERIOD
+    NO_OPEN_PERIOD,
+    /** Late event for a MIN/MAX/LAST/UNIQUE_COUNT meter, which cannot be carried forward additively. */
+    LATE_NOT_ADJUSTABLE
 }
