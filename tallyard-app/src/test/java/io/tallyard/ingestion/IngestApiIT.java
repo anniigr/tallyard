@@ -95,7 +95,8 @@ class IngestApiIT extends AbstractIntegrationTest {
         List<java.util.concurrent.Future<ResponseEntity<String>>> futures = new ArrayList<>();
         for (int i = 0; i < 8; i++) {
             final int n = i;
-            futures.add(pool.submit(() -> ingest.ingest(ApiClient.batch("rl" + n, "request", "s", Instant.now(), 1000, Map.of()))));
+            futures.add(pool.submit(
+                    () -> ingest.ingest(ApiClient.batch("rl" + n, "request", "s", Instant.now(), 1000, Map.of()))));
         }
         int limited = 0;
         int accepted = 0;

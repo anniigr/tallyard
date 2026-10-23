@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -312,8 +313,9 @@ class BillingService implements BillingPeriods, BillingQueries {
 
     // ------------------------------------------------------------------ queries
 
+    /** MANDATORY: the shared lock only makes sense inside the caller's (metering) transaction. */
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(propagation = Propagation.MANDATORY)
     public Optional<BillingPeriodView> lockPeriodCovering(UUID subscriptionId, Instant at) {
         return periods.lockShareCovering(subscriptionId, at).map(BillingPeriod::toView);
     }
@@ -325,7 +327,7 @@ class BillingService implements BillingPeriods, BillingQueries {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional(propagation = Propagation.MANDATORY)
     public Optional<BillingPeriodView> lockOpenPeriod(UUID subscriptionId) {
         return periods.lockShareOpen(subscriptionId).map(BillingPeriod::toView);
     }

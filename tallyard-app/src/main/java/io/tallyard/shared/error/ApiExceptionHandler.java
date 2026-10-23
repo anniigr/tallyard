@@ -11,11 +11,11 @@ import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.method.ParameterErrors;
 import org.springframework.validation.method.ParameterValidationResult;
 import org.springframework.web.ErrorResponse;
@@ -131,7 +131,9 @@ public class ApiExceptionHandler {
             // Spring MVC's own 4xx family (405, 406, 415, 404 for static resources, …): keep the
             // status and add our code extension instead of masking them as 500.
             HttpStatus status = HttpStatus.valueOf(er.getStatusCode().value());
-            String detail = er.getBody().getDetail() == null ? status.getReasonPhrase() : er.getBody().getDetail();
+            String detail = er.getBody().getDetail() == null
+                    ? status.getReasonPhrase()
+                    : er.getBody().getDetail();
             String code = status.name().toLowerCase(java.util.Locale.ROOT);
             if (status.is5xxServerError()) {
                 log.error("Unhandled exception", ex);
