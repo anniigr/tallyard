@@ -23,6 +23,7 @@ x-app-env: &app-env
   SPRING_LIFECYCLE_TIMEOUT_PER_SHUTDOWN_PHASE: 20s
 
 x-app-runtime: &app-runtime
+  init: true                 # JVM is not PID 1: a crashed JVM exits the container and the restart policy applies
   restart: unless-stopped
   stop_grace_period: 30s
   mem_limit: 1g

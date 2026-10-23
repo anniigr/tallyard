@@ -385,7 +385,7 @@ public final class Simulator {
                         sorted.size());
                 System.out.printf(
                         Locale.ROOT,
-                        "(%d late events were sent and are expected as adjustments on the next rating, not in live usage.)%n",
+                        "(%d late events were sent; they are not part of live usage: adjustments if their period was already rated, rejections if they predate the subscription.)%n",
                         late);
                 return;
             }

@@ -26,7 +26,7 @@ verified — automatically (test class) or as a manual drill with the recorded p
 | 19 | Wrong / missing / revoked key, wrong scope, foreign tenant ids | Various | 401 / 403 / 404 as designed | `SecurityIT` |
 | 20 | Entitlement limit exceeded; credit exhausted | Usage beyond `hardLimit`; prepaid charges > balance | DENY with reason within TTL | `EntitlementIT` |
 | 21 | Kafka unavailable during ingest | `docker compose stop kafka` while the simulator runs | 503 + `Retry-After`; readiness `kafka: DOWN`; simulator retries; after `start kafka` the truth check passes | Manual drill (procedure below) |
-| 22 | Worker killed under load | `docker compose kill worker` during the simulator run, then `up -d worker` | Lag grows then drains; truth check passes | Manual drill (procedure below) |
+| 22 | Worker crashes under load | `kill -9` of the worker JVM inside its container during the simulator run; Compose `restart: unless-stopped` restarts it | Lag grows then drains; truth check passes | Manual drill (procedure below) |
 | 23 | PostgreSQL unavailable | `docker compose stop postgres` | API 5xx; consumer retries with backoff; no acks; recovers on `start` | Manual drill |
 | 24 | Two workers, rebalance | `--scale worker=2` mid-run | Per-partition ordering preserved; no double counting | Manual drill |
 
@@ -35,8 +35,9 @@ verified — automatically (test class) or as a manual drill with the recorded p
 ```bash
 make up                                   # full stack
 java -jar tallyard-simulator/target/tallyard-simulator.jar --key $KEY --rate 500 --duration 90 &
-sleep 20; docker compose -f deploy/docker-compose.yml kill worker
-sleep 15; docker compose -f deploy/docker-compose.yml up -d worker
+sleep 20; docker exec tallyard-worker-1 sh -c 'kill -9 $(pidof java)'   # crash the JVM; Compose restarts the container
+# (docker kill / docker stop count as operator stops and are NOT auto-restarted by Docker; the stack
+#  runs the JVM under an init process so a JVM crash terminates the container)
 # optionally: docker compose -f deploy/docker-compose.yml stop kafka; sleep 10; ... start kafka
 wait                                      # simulator prints the truth check
 ```

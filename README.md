@@ -200,7 +200,7 @@ make sim RATE=500 DURATION=60
 ```
 
 Try the failure drill from [docs/testing/failure-scenarios.md](docs/testing/failure-scenarios.md):
-kill the worker during the run and watch the truth check still pass.
+crash the worker JVM during the run and watch the truth check still pass.
 
 Ingest an event by hand:
 

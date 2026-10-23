@@ -23,8 +23,8 @@ latencies include contention that a real deployment would not have.
 ```bash
 java -jar tallyard-simulator/target/tallyard-simulator.jar --url http://localhost:8080 --key $KEY \
      --customers 20 --rate 500 --duration 90 --duplicates 0.05 --late 0.02 --invalid 0.01 --seed 42
-# t+25 s: docker kill tallyard-worker-1        (09:59:19 UTC)
-# t+45 s: docker compose up -d worker          (09:59:40 UTC)
+# t+25 s: docker exec tallyard-worker-1 sh -c 'kill -9 $(pidof java)'   (10:50:28 UTC)
+#         Compose restart policy brought the container back within 3 s; healthy again at 10:50:51
 ```
 
 Raw: `raw/simulator-chaos-run.txt`, `raw/chaos-timeline.txt`.
@@ -34,12 +34,12 @@ Raw: `raw/simulator-chaos-run.txt`, `raw/chaos-timeline.txt`.
 | Events sent (including injected duplicates) | 49,104 |
 | Accepted by the API (202) | 49,104 — 0 × 503, 0 × 429, 0 retries |
 | Injected duplicates / late / invalid-value events | 4,104 / 937 / 459 |
-| Ingest batch latency (100 events, host → api → Kafka acks) p50 / p95 / p99 | 21.6 ms / 35.6 ms / 50.6 ms |
-| Worker outage | 21 s (killed with SIGKILL mid-batch, restarted) |
-| Peak consumer lag during the outage (Kafka `records_lag_max`) | 4,142 records on the busiest partition |
+| Ingest batch latency (100 events, host → api → Kafka acks) p50 / p95 / p99 | 19.6 ms / 37.8 ms / 64.2 ms |
+| Worker outage | JVM killed with SIGKILL mid-batch; container restarted by the Compose policy in ~3 s, readiness healthy ~23 s after the kill |
+| Peak consumer lag during the outage (Kafka `records_lag_max`) | 3,073 records on the busiest partition (`raw/prometheus-consumer-lag-max.json` holds an earlier run with a 21 s manual restart: 4,142) |
 | Time for lag to drain after restart | < 10 s (truth check succeeded on its first poll after drain) |
-| Consumer batch transaction p50 / p99 (`tallyard.metering.batch`) | 41 ms / 192 ms (p99 during catch-up after restart) |
-| Rejections recorded (from `rejected_event`) | 937 × `NO_ACTIVE_SUBSCRIPTION` (the simulator's "late" events predate the demo subscriptions, which were created 5 s before the run — no period had been rated yet, so they are rejections rather than adjustments), 459 × `INVALID_VALUE` (the injected non-numeric `tokens`) |
+| Consumer batch transaction p50 / p99 (`tallyard.metering.batch`) | 88 ms / 226 ms (maximum of the per-minute percentiles over the run; the p50 peak is the catch-up burst of full 500-record batches after restart) |
+| Rejections recorded (from `rejected_event`) | 937 × `NO_ACTIVE_SUBSCRIPTION` (the simulator's "late" events predate the demo subscriptions, which were created seconds before the run — no period had been rated yet, so they are rejections rather than adjustments; the adjustment path is covered by `BillingLifecycleIT`), 459 × `INVALID_VALUE` (the injected non-numeric `tokens`) |
 | **Truth check** | **ALL 20 CUSTOMERS MATCH** — live totals equal the simulator's expected totals exactly |
 
 The outage window shows up in Grafana as a lag spike that returns to zero; `duplicate` outcomes
@@ -57,9 +57,9 @@ inside batches), 20 pre-allocated VUs.
 
 | Measure | Value | Threshold |
 |---|---|---|
-| Accepted events | 125,967 (2,099/s) | – |
+| Accepted events | 126,152 (2,102/s) | – |
 | Requests / failures | 1,200 / 0 (0.00 %) | < 1 % |
-| HTTP latency p50 / p95 / p99 / max | 10.0 ms / 14.7 ms / **22.8 ms** / 48.5 ms | p95 < 150 ms, p99 < 300 ms |
+| HTTP latency p50 / p95 / p99 / max | 9.4 ms / 12.2 ms / **16.8 ms** / 38.0 ms | p95 < 150 ms, p99 < 300 ms |
 | VUs needed to sustain the rate | ≤ 1 of 20 | – |
 | Consumer: everything counted, lag back to 0 within seconds after the run | yes (`/v1/usage/stats` and `records_lag_max`) | – |
 | Peak stored rate on the worker (`rate(stored[30s])`) | 2,000 events/s with a single worker (i.e. the full offered load) | – |
