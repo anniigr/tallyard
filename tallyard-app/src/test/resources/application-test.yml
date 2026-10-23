@@ -1,0 +1,42 @@
+tallyard:
+  role: all
+  encryption-key: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=   # base64 of "0123456789abcdef0123456789abcdef"; test only
+  topics:
+    partitions: 3
+  ingestion:
+    rate-limit-per-key-per-second: 2500
+  billing:
+    scheduler-interval: PT1S
+    auto-finalize-after: PT1H
+  entitlements:
+    cache-ttl: PT0.5S
+  outbox:
+    poll-interval: PT0.3S
+  webhooks:
+    poll-interval: PT0.3S
+    initial-backoff: PT0.5S
+    max-attempts: 3
+  demo:
+    enabled: false
+spring:
+  kafka:
+    listener:
+      concurrency: 2
+management:
+  server:
+    port: 0
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  tracing:
+    sampling:
+      probability: 0
+  opentelemetry:
+    tracing:
+      export:
+        enabled: false
+logging:
+  level:
+    io.tallyard: INFO
+    org.apache.kafka: ERROR
