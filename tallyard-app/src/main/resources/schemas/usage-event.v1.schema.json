@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tallyard.io/schemas/usage-event.v1.schema.json",
+  "title": "UsageEvent v1",
+  "description": "Message contract of the Kafka topic usage.events.v1. Partition key: tenantId:subject.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tenantId", "eventId", "eventType", "subject", "occurredAt", "ingestedAt", "properties"],
+  "properties": {
+    "tenantId":   { "type": "string", "format": "uuid" },
+    "eventId":    { "type": "string", "minLength": 1, "maxLength": 128,
+                    "description": "Client-supplied idempotency key, unique per tenant" },
+    "eventType":  { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_.]{0,63}$" },
+    "subject":    { "type": "string", "minLength": 1, "maxLength": 128,
+                    "description": "Customer external id" },
+    "occurredAt": { "type": "string", "format": "date-time", "description": "Event time (client clock)" },
+    "ingestedAt": { "type": "string", "format": "date-time", "description": "Assigned by Tallyard" },
+    "properties": { "type": "object", "maxProperties": 50,
+                    "description": "Arbitrary flat-ish JSON; meters read numeric or string values by property name" }
+  }
+}

@@ -1,0 +1,2327 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "OpenAPI definition",
+    "version" : "v0"
+  },
+  "servers" : [ {
+    "url" : "http://localhost:54947",
+    "description" : "Generated server url"
+  } ],
+  "tags" : [ {
+    "name" : "Billing",
+    "description" : "Billing periods, invoice drafts and replay"
+  }, {
+    "name" : "Ingestion",
+    "description" : "Submit usage events"
+  }, {
+    "name" : "Demo",
+    "description" : "Local webhook receiver used by the demo"
+  }, {
+    "name" : "Dashboard",
+    "description" : "Aggregated read model for the operations UI"
+  }, {
+    "name" : "Catalog",
+    "description" : "Meters, customers, plans and subscriptions"
+  }, {
+    "name" : "Entitlements",
+    "description" : "Real-time allow/deny decisions"
+  }, {
+    "name" : "Credits",
+    "description" : "Prepaid credit grants"
+  }, {
+    "name" : "Tenancy",
+    "description" : "Tenant bootstrap and API key management"
+  }, {
+    "name" : "Webhooks",
+    "description" : "Endpoint registration and delivery inspection"
+  }, {
+    "name" : "Usage",
+    "description" : "Live usage, adjustments and rejections"
+  } ],
+  "paths" : {
+    "/v1/webhooks" : {
+      "get" : {
+        "tags" : [ "Webhooks" ],
+        "summary" : "List endpoints",
+        "operationId" : "list",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/EndpointResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Webhooks" ],
+        "summary" : "Register a webhook endpoint (secret returned once)",
+        "operationId" : "register",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Registered"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/webhooks/deliveries/{id}/retry" : {
+      "post" : {
+        "tags" : [ "Webhooks" ],
+        "summary" : "Re-queue a dead or pending delivery for immediate retry",
+        "operationId" : "retry",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeliveryResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/webhook-sink" : {
+      "get" : {
+        "tags" : [ "Demo" ],
+        "summary" : "Webhooks received by the demo sink",
+        "operationId" : "list_1",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Received"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Demo" ],
+        "summary" : "Receive a webhook (demo sink; unauthenticated)",
+        "operationId" : "receive",
+        "parameters" : [ {
+          "name" : "X-Tallyard-Signature",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "X-Tallyard-Event",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "X-Tallyard-Delivery",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "X-Tallyard-Attempt",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/v1/subscriptions" : {
+      "get" : {
+        "tags" : [ "Catalog" ],
+        "summary" : "List subscriptions",
+        "operationId" : "subscriptions",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/SubscriptionView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Catalog" ],
+        "summary" : "Subscribe a customer to a plan; opens the first billing period",
+        "operationId" : "subscribe",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SubscribeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SubscriptionView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subscriptions/{id}/end" : {
+      "post" : {
+        "tags" : [ "Catalog" ],
+        "summary" : "End a subscription",
+        "operationId" : "end",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        }, {
+          "name" : "at",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SubscriptionView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/plans" : {
+      "get" : {
+        "tags" : [ "Catalog" ],
+        "summary" : "List plans",
+        "operationId" : "plans",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PlanView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Catalog" ],
+        "summary" : "Create a plan with its price components",
+        "operationId" : "createPlan",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreatePlanRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlanView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/periods/{id}/replay" : {
+      "post" : {
+        "tags" : [ "Billing" ],
+        "summary" : "Replay a rated period from the immutable event log and compare with the stored invoice",
+        "description" : "Recomputes quantities from usage_event as of the original rating time and re-rates them. matches=true proves the stored invoice is exactly reproducible from the raw events.",
+        "operationId" : "replay",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ReplayReport"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/periods/{id}/rate" : {
+      "post" : {
+        "tags" : [ "Billing" ],
+        "summary" : "Rate a period now (closes it first if still OPEN) and produce the invoice draft",
+        "operationId" : "rate",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvoiceView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/periods/{id}/finalize" : {
+      "post" : {
+        "tags" : [ "Billing" ],
+        "summary" : "Finalize a RATED period",
+        "operationId" : "finalizePeriod",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BillingPeriodView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/periods/{id}/close" : {
+      "post" : {
+        "tags" : [ "Billing" ],
+        "summary" : "Close an OPEN period now (starts the grace window; opens the next period)",
+        "operationId" : "close",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BillingPeriodView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/meters" : {
+      "get" : {
+        "tags" : [ "Catalog" ],
+        "summary" : "List meters",
+        "operationId" : "meters",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MeterView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Catalog" ],
+        "summary" : "Create a meter",
+        "operationId" : "createMeter",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateMeterRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeterView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/events" : {
+      "post" : {
+        "tags" : [ "Ingestion" ],
+        "summary" : "Ingest a batch of usage events",
+        "description" : "Each event carries a client-generated eventId that acts as an idempotency key per tenant. Re-submitting an event is always safe: duplicates are discarded downstream. The call returns 202 only after the event log (Kafka) has acknowledged every accepted event. Structurally invalid events are reported per item and do not fail the batch.",
+        "operationId" : "ingest",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/IngestRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "202" : {
+            "description" : "Batch durably accepted",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestResult"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Malformed request",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestResult"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Missing or invalid API key",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestResult"
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Key lacks INGEST scope",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestResult"
+                }
+              }
+            }
+          },
+          "429" : {
+            "description" : "Rate limit exceeded; see Retry-After",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestResult"
+                }
+              }
+            }
+          },
+          "503" : {
+            "description" : "Event log unavailable; retry with the same event ids",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/entitlements/check" : {
+      "post" : {
+        "tags" : [ "Entitlements" ],
+        "summary" : "May this subject consume `requested` more units of `meter` right now?",
+        "description" : "Answers from a snapshot that is at most `tallyard.entitlements.cache-ttl` old (default 2 s).",
+        "operationId" : "check",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CheckRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EntitlementDecision"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customers" : {
+      "get" : {
+        "tags" : [ "Catalog" ],
+        "summary" : "List customers",
+        "operationId" : "customers",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/CustomerView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Catalog" ],
+        "summary" : "Create a customer (the subject of usage events)",
+        "operationId" : "createCustomer",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateCustomerRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CustomerView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/credits" : {
+      "post" : {
+        "tags" : [ "Credits" ],
+        "summary" : "Grant prepaid credit to a customer",
+        "operationId" : "grant",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GrantRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GrantResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/api-keys" : {
+      "get" : {
+        "tags" : [ "Tenancy" ],
+        "summary" : "List API keys (prefixes only)",
+        "operationId" : "list_2",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ApiKeyResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Tenancy" ],
+        "summary" : "Issue a new API key for the current tenant",
+        "operationId" : "issueKey",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/IssueKeyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IssuedKeyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/tenants" : {
+      "post" : {
+        "tags" : [ "Tenancy" ],
+        "summary" : "Create a tenant and its first ADMIN key",
+        "description" : "Protected by the X-Bootstrap-Token header (TALLYARD_BOOTSTRAP_TOKEN). Disabled when the token is empty.",
+        "operationId" : "createTenant",
+        "parameters" : [ {
+          "name" : "X-Bootstrap-Token",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateTenantRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Created",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CreateTenantResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/webhooks/deliveries" : {
+      "get" : {
+        "tags" : [ "Webhooks" ],
+        "summary" : "Recent deliveries with state, attempts and last error",
+        "operationId" : "deliveries",
+        "parameters" : [ {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 100
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/DeliveryResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/usage/stats" : {
+      "get" : {
+        "tags" : [ "Usage" ],
+        "summary" : "Tenant-level metering counts",
+        "operationId" : "stats",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/MeteringStats"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/rejections" : {
+      "get" : {
+        "tags" : [ "Usage" ],
+        "summary" : "Most recent rejected events with reasons",
+        "operationId" : "rejections",
+        "parameters" : [ {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 100
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/RejectedEventView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/periods" : {
+      "get" : {
+        "tags" : [ "Billing" ],
+        "summary" : "List billing periods, optionally for one customer",
+        "operationId" : "periods",
+        "parameters" : [ {
+          "name" : "customer",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/BillingPeriodView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/periods/{id}" : {
+      "get" : {
+        "tags" : [ "Billing" ],
+        "summary" : "Get a billing period",
+        "operationId" : "period",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BillingPeriodView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/periods/{id}/usage" : {
+      "get" : {
+        "tags" : [ "Usage" ],
+        "summary" : "Live usage per meter for a billing period",
+        "operationId" : "usage",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/MeterUsage"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/periods/{id}/invoice" : {
+      "get" : {
+        "tags" : [ "Billing" ],
+        "summary" : "Get the invoice draft of a period",
+        "operationId" : "invoice",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/InvoiceView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/periods/{id}/estimate" : {
+      "get" : {
+        "tags" : [ "Billing" ],
+        "summary" : "Rate the period's current usage without persisting (live estimate)",
+        "operationId" : "estimate",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EstimateResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/periods/{id}/adjustments" : {
+      "get" : {
+        "tags" : [ "Usage" ],
+        "summary" : "Late events applied to a period as adjustments",
+        "operationId" : "adjustments",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AdjustmentView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/invoices" : {
+      "get" : {
+        "tags" : [ "Billing" ],
+        "summary" : "List recent invoice drafts",
+        "operationId" : "invoices",
+        "parameters" : [ {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32",
+            "default" : 50
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/InvoiceView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/dashboard/overview" : {
+      "get" : {
+        "tags" : [ "Dashboard" ],
+        "summary" : "Everything the operations UI shows, in one call",
+        "operationId" : "overview",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Overview"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customers/{externalId}" : {
+      "get" : {
+        "tags" : [ "Catalog" ],
+        "summary" : "Get a customer by external id",
+        "operationId" : "customer",
+        "parameters" : [ {
+          "name" : "externalId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CustomerView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/customers/{externalId}/credits" : {
+      "get" : {
+        "tags" : [ "Credits" ],
+        "summary" : "List a customer's credit grants",
+        "operationId" : "list_3",
+        "parameters" : [ {
+          "name" : "externalId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/GrantResponse"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/webhooks/{id}" : {
+      "delete" : {
+        "tags" : [ "Webhooks" ],
+        "summary" : "Deactivate an endpoint",
+        "operationId" : "deactivate",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    },
+    "/v1/api-keys/{id}" : {
+      "delete" : {
+        "tags" : [ "Tenancy" ],
+        "summary" : "Revoke an API key",
+        "operationId" : "revoke",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "RegisterRequest" : {
+        "type" : "object",
+        "properties" : {
+          "url" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "eventTypes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "minItems" : 1,
+            "uniqueItems" : true
+          }
+        },
+        "required" : [ "eventTypes", "url" ]
+      },
+      "Registered" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "url" : {
+            "type" : "string"
+          },
+          "secret" : {
+            "type" : "string"
+          },
+          "eventTypes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "uniqueItems" : true
+          }
+        }
+      },
+      "DeliveryResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "endpointId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "eventId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "eventType" : {
+            "type" : "string"
+          },
+          "state" : {
+            "type" : "string"
+          },
+          "attempts" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "nextAttemptAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "lastStatus" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "lastError" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "deliveredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "SubscribeRequest" : {
+        "type" : "object",
+        "properties" : {
+          "customerExternalId" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "planCode" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "startsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "customerExternalId", "planCode" ]
+      },
+      "SubscriptionView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "tenantId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "customerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "planId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "startsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "endsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ACTIVE", "ENDED" ]
+          }
+        }
+      },
+      "ComponentRequest" : {
+        "type" : "object",
+        "properties" : {
+          "meterCode" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "pricingModel" : {
+            "type" : "string",
+            "enum" : [ "FLAT", "PER_UNIT", "GRADUATED", "VOLUME", "PACKAGE" ]
+          },
+          "includedUnits" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "packageSize" : {
+            "type" : "number",
+            "exclusiveMinimum" : 0
+          },
+          "hardLimit" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "tiers" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TierRequest"
+            }
+          }
+        },
+        "required" : [ "meterCode", "pricingModel" ]
+      },
+      "CreatePlanRequest" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[a-z][a-z0-9_-]{1,63}"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 120,
+            "minLength" : 0
+          },
+          "currency" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[A-Z]{3}"
+          },
+          "intervalUnit" : {
+            "type" : "string",
+            "enum" : [ "MINUTES", "HOURS", "DAYS", "MONTHS" ]
+          },
+          "intervalLength" : {
+            "type" : "integer",
+            "format" : "int32",
+            "minimum" : 1
+          },
+          "graceSeconds" : {
+            "type" : "integer",
+            "format" : "int32",
+            "minimum" : 0
+          },
+          "minimumAmount" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "components" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ComponentRequest"
+            },
+            "minItems" : 1
+          }
+        },
+        "required" : [ "code", "components", "currency", "intervalUnit", "name" ]
+      },
+      "TierRequest" : {
+        "type" : "object",
+        "properties" : {
+          "upTo" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "unitPrice" : {
+            "type" : "number",
+            "minimum" : 0
+          },
+          "flatAmount" : {
+            "type" : "number",
+            "minimum" : 0
+          }
+        }
+      },
+      "BillingInterval" : {
+        "type" : "object",
+        "properties" : {
+          "unit" : {
+            "type" : "string",
+            "enum" : [ "MINUTES", "HOURS", "DAYS", "MONTHS" ]
+          },
+          "length" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "ComponentView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "meterId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "meterCode" : {
+            "type" : "string"
+          },
+          "position" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "pricingModel" : {
+            "type" : "string",
+            "enum" : [ "FLAT", "PER_UNIT", "GRADUATED", "VOLUME", "PACKAGE" ]
+          },
+          "includedUnits" : {
+            "type" : "number"
+          },
+          "packageSize" : {
+            "type" : "number"
+          },
+          "hardLimit" : {
+            "type" : "number"
+          },
+          "tiers" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/TierView"
+            }
+          }
+        }
+      },
+      "PlanView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "tenantId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "object",
+            "properties" : {
+              "currencyCode" : {
+                "type" : "string"
+              },
+              "numericCode" : {
+                "type" : "integer",
+                "format" : "int32"
+              },
+              "numericCodeAsString" : {
+                "type" : "string"
+              },
+              "displayName" : {
+                "type" : "string"
+              },
+              "symbol" : {
+                "type" : "string"
+              },
+              "defaultFractionDigits" : {
+                "type" : "integer",
+                "format" : "int32"
+              }
+            }
+          },
+          "interval" : {
+            "$ref" : "#/components/schemas/BillingInterval"
+          },
+          "graceSeconds" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "minimumAmount" : {
+            "type" : "number"
+          },
+          "components" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ComponentView"
+            }
+          }
+        }
+      },
+      "TierView" : {
+        "type" : "object",
+        "properties" : {
+          "upTo" : {
+            "type" : "number"
+          },
+          "unitPrice" : {
+            "type" : "number"
+          },
+          "flatAmount" : {
+            "type" : "number"
+          }
+        }
+      },
+      "ReplayReport" : {
+        "type" : "object",
+        "properties" : {
+          "periodId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "matches" : {
+            "type" : "boolean"
+          },
+          "storedHash" : {
+            "type" : "string"
+          },
+          "replayedHash" : {
+            "type" : "string"
+          },
+          "differences" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "durationMillis" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "InvoiceView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "periodId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "customerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "subtotal" : {
+            "type" : "number"
+          },
+          "creditsApplied" : {
+            "type" : "number"
+          },
+          "total" : {
+            "type" : "number"
+          },
+          "reproducibilityHash" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "lines" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LineView"
+            }
+          }
+        }
+      },
+      "LineView" : {
+        "type" : "object",
+        "properties" : {
+          "position" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "componentId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "meterId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "quantity" : {
+            "type" : "number"
+          },
+          "amount" : {
+            "type" : "number"
+          },
+          "breakdownJson" : {
+            "type" : "string"
+          }
+        }
+      },
+      "BillingPeriodView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "tenantId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "subscriptionId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "customerId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "startsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "endsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "state" : {
+            "type" : "string",
+            "enum" : [ "OPEN", "CLOSING", "RATED", "FINALIZED" ]
+          },
+          "graceUntil" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "ratedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "finalizedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "CreateMeterRequest" : {
+        "type" : "object",
+        "properties" : {
+          "code" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[a-z][a-z0-9_]{1,63}"
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 120,
+            "minLength" : 0
+          },
+          "eventType" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[a-zA-Z][a-zA-Z0-9_.]{0,63}"
+          },
+          "aggregation" : {
+            "type" : "string",
+            "enum" : [ "SUM", "COUNT", "MIN", "MAX", "LAST", "UNIQUE_COUNT" ]
+          },
+          "valueProperty" : {
+            "type" : "string",
+            "maxLength" : 64,
+            "minLength" : 0
+          },
+          "unit" : {
+            "type" : "string",
+            "maxLength" : 32,
+            "minLength" : 0
+          },
+          "acceptanceWindow" : {
+            "type" : "string",
+            "format" : "duration"
+          }
+        },
+        "required" : [ "aggregation", "code", "eventType", "name", "unit" ]
+      },
+      "MeterView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "tenantId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "code" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "eventType" : {
+            "type" : "string"
+          },
+          "aggregation" : {
+            "type" : "string",
+            "enum" : [ "SUM", "COUNT", "MIN", "MAX", "LAST", "UNIQUE_COUNT" ]
+          },
+          "valueProperty" : {
+            "type" : "string"
+          },
+          "unit" : {
+            "type" : "string"
+          },
+          "acceptanceWindow" : {
+            "type" : "string",
+            "format" : "duration"
+          }
+        }
+      },
+      "IncomingEvent" : {
+        "type" : "object",
+        "properties" : {
+          "eventId" : {
+            "type" : "string",
+            "maxLength" : 128,
+            "minLength" : 0
+          },
+          "eventType" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[a-zA-Z][a-zA-Z0-9_.]{0,63}"
+          },
+          "subject" : {
+            "type" : "string",
+            "maxLength" : 128,
+            "minLength" : 0
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "properties" : {
+            "type" : "object",
+            "additionalProperties" : { }
+          }
+        },
+        "required" : [ "eventId", "eventType", "occurredAt", "subject" ]
+      },
+      "IngestRequest" : {
+        "type" : "object",
+        "properties" : {
+          "events" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/IncomingEvent"
+            },
+            "minItems" : 1
+          }
+        },
+        "required" : [ "events" ]
+      },
+      "EventStatus" : {
+        "type" : "object",
+        "properties" : {
+          "eventId" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string",
+            "enum" : [ "ACCEPTED", "INVALID" ]
+          },
+          "errors" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "IngestResult" : {
+        "type" : "object",
+        "properties" : {
+          "accepted" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "invalid" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "results" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/EventStatus"
+            }
+          }
+        }
+      },
+      "CheckRequest" : {
+        "type" : "object",
+        "properties" : {
+          "subject" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "meter" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "requested" : {
+            "type" : "number",
+            "minimum" : 0
+          }
+        },
+        "required" : [ "meter", "subject" ]
+      },
+      "EntitlementDecision" : {
+        "type" : "object",
+        "properties" : {
+          "decision" : {
+            "type" : "string",
+            "enum" : [ "ALLOW", "DENY" ]
+          },
+          "reason" : {
+            "type" : "string",
+            "enum" : [ "WITHIN_LIMIT", "NO_LIMIT", "UNKNOWN_SUBJECT", "NO_ACTIVE_SUBSCRIPTION", "NO_OPEN_PERIOD", "METER_NOT_IN_PLAN", "LIMIT_EXCEEDED", "CREDIT_EXHAUSTED" ]
+          },
+          "subject" : {
+            "type" : "string"
+          },
+          "meter" : {
+            "type" : "string"
+          },
+          "requested" : {
+            "type" : "number"
+          },
+          "used" : {
+            "type" : "number"
+          },
+          "limit" : {
+            "type" : "number"
+          },
+          "remaining" : {
+            "type" : "number"
+          },
+          "creditRemaining" : {
+            "type" : "number"
+          },
+          "asOf" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "CreateCustomerRequest" : {
+        "type" : "object",
+        "properties" : {
+          "externalId" : {
+            "type" : "string",
+            "maxLength" : 128,
+            "minLength" : 0
+          },
+          "name" : {
+            "type" : "string",
+            "maxLength" : 200,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "externalId", "name" ]
+      },
+      "CustomerView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "tenantId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "externalId" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        }
+      },
+      "GrantRequest" : {
+        "type" : "object",
+        "properties" : {
+          "customerExternalId" : {
+            "type" : "string",
+            "minLength" : 1
+          },
+          "currency" : {
+            "type" : "string",
+            "minLength" : 1,
+            "pattern" : "[A-Z]{3}"
+          },
+          "amount" : {
+            "type" : "number",
+            "exclusiveMinimum" : 0
+          },
+          "priority" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        },
+        "required" : [ "amount", "currency", "customerExternalId" ]
+      },
+      "GrantResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "amountGranted" : {
+            "type" : "number"
+          },
+          "amountConsumed" : {
+            "type" : "number"
+          },
+          "remaining" : {
+            "type" : "number"
+          },
+          "priority" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "IssueKeyRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 120,
+            "minLength" : 0
+          },
+          "scopes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "INGEST", "READ", "ADMIN" ]
+            },
+            "minItems" : 1,
+            "uniqueItems" : true
+          }
+        },
+        "required" : [ "name", "scopes" ]
+      },
+      "IssuedKeyResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "prefix" : {
+            "type" : "string"
+          },
+          "secret" : {
+            "type" : "string"
+          },
+          "scopes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "INGEST", "READ", "ADMIN" ]
+            },
+            "uniqueItems" : true
+          }
+        }
+      },
+      "CreateTenantRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "maxLength" : 120,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "name" ]
+      },
+      "CreateTenantResponse" : {
+        "type" : "object",
+        "properties" : {
+          "tenantId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "adminKey" : {
+            "$ref" : "#/components/schemas/IssuedKeyResponse"
+          }
+        }
+      },
+      "EndpointResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "url" : {
+            "type" : "string"
+          },
+          "eventTypes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            },
+            "uniqueItems" : true
+          },
+          "active" : {
+            "type" : "boolean"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "Received" : {
+        "type" : "object",
+        "properties" : {
+          "receivedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "eventType" : {
+            "type" : "string"
+          },
+          "delivery" : {
+            "type" : "string"
+          },
+          "attempt" : {
+            "type" : "string"
+          },
+          "signatureValid" : {
+            "type" : "boolean"
+          },
+          "body" : {
+            "type" : "string"
+          }
+        }
+      },
+      "MeteringStats" : {
+        "type" : "object",
+        "properties" : {
+          "storedEvents" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "adjustments" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "rejected" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "RejectedEventView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "eventId" : {
+            "type" : "string"
+          },
+          "eventType" : {
+            "type" : "string"
+          },
+          "subject" : {
+            "type" : "string"
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "reason" : {
+            "type" : "string",
+            "enum" : [ "SCHEMA_INVALID", "NO_MATCHING_METER", "UNKNOWN_SUBJECT", "NO_ACTIVE_SUBSCRIPTION", "OUTSIDE_ACCEPTANCE_WINDOW", "INVALID_VALUE", "NO_PERIOD", "NO_OPEN_PERIOD" ]
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "MeterUsage" : {
+        "type" : "object",
+        "properties" : {
+          "meterId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "meterCode" : {
+            "type" : "string"
+          },
+          "unit" : {
+            "type" : "string"
+          },
+          "aggregation" : {
+            "type" : "string",
+            "enum" : [ "SUM", "COUNT", "MIN", "MAX", "LAST", "UNIQUE_COUNT" ]
+          },
+          "quantity" : {
+            "type" : "number"
+          },
+          "eventCount" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "EstimateResponse" : {
+        "type" : "object",
+        "properties" : {
+          "periodId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "subtotal" : {
+            "type" : "number"
+          }
+        }
+      },
+      "AdjustmentView" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "meterId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "originalPeriodId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "eventId" : {
+            "type" : "string"
+          },
+          "value" : {
+            "type" : "number"
+          },
+          "occurredAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "CustomerRow" : {
+        "type" : "object",
+        "properties" : {
+          "externalId" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "plan" : {
+            "type" : "string"
+          },
+          "currency" : {
+            "type" : "string"
+          },
+          "openPeriodId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "periodEndsAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "usage" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/MeterUsage"
+            }
+          },
+          "estimate" : {
+            "type" : "number"
+          },
+          "creditBalance" : {
+            "type" : "number"
+          }
+        }
+      },
+      "Overview" : {
+        "type" : "object",
+        "properties" : {
+          "asOf" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "stats" : {
+            "$ref" : "#/components/schemas/MeteringStats"
+          },
+          "customers" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/CustomerRow"
+            }
+          },
+          "periods" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/BillingPeriodView"
+            }
+          },
+          "invoices" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/InvoiceView"
+            }
+          },
+          "rejections" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/RejectedEventView"
+            }
+          }
+        }
+      },
+      "ApiKeyResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "prefix" : {
+            "type" : "string"
+          },
+          "scopes" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string",
+              "enum" : [ "INGEST", "READ", "ADMIN" ]
+            },
+            "uniqueItems" : true
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "revokedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      }
+    }
+  }
+}

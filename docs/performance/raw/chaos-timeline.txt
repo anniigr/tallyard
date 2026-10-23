@@ -1,0 +1,3 @@
+10:50:28 crash injected: kill -9 of the worker JVM inside its container
+10:50:31 worker container: running restarts=1
+10:50:51 worker container: running health=healthy restarts=1

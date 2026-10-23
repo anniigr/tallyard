@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tallyard — Operations</title>
+  <link rel="stylesheet" href="/ui/style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo">▮▮▯</span> Tallyard <span class="muted">operations</span></div>
+  <div class="controls">
+    <input id="apiKey" type="password" placeholder="API key (ty_…)" autocomplete="off" spellcheck="false">
+    <button id="connect">Connect</button>
+    <label class="toggle"><input id="autorefresh" type="checkbox" checked> auto-refresh</label>
+    <span id="status" class="status">disconnected</span>
+  </div>
+</header>
+
+<main id="app" hidden>
+  <section class="tiles">
+    <div class="tile"><div class="label">Events in log</div><div class="value" id="statEvents">–</div></div>
+    <div class="tile"><div class="label">Late adjustments</div><div class="value" id="statAdjust">–</div></div>
+    <div class="tile"><div class="label">Rejected</div><div class="value" id="statRejected">–</div></div>
+    <div class="tile"><div class="label">Open periods</div><div class="value" id="statOpen">–</div></div>
+    <div class="tile"><div class="label">Invoice drafts</div><div class="value" id="statInvoices">–</div></div>
+    <div class="tile"><div class="label">As of</div><div class="value small" id="statAsOf">–</div></div>
+  </section>
+
+  <section class="panel">
+    <h2>Customers — live usage in the open period</h2>
+    <table id="customers"><thead><tr>
+      <th>Customer</th><th>Plan</th><th>Period ends</th><th>Usage</th><th class="num">Estimate</th><th class="num">Credit</th><th>Actions</th>
+    </tr></thead><tbody></tbody></table>
+  </section>
+
+  <section class="grid2">
+    <div class="panel">
+      <h2>Billing periods</h2>
+      <table id="periods"><thead><tr><th>State</th><th>Customer</th><th>Window</th><th>Actions</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="panel">
+      <h2>Invoice drafts</h2>
+      <div id="invoices"></div>
+    </div>
+  </section>
+
+  <section class="grid2">
+    <div class="panel">
+      <h2>Rejected events</h2>
+      <table id="rejections"><thead><tr><th>When</th><th>Reason</th><th>Subject</th><th>Event</th><th>Detail</th></tr></thead><tbody></tbody></table>
+    </div>
+    <div class="panel">
+      <h2>Webhook deliveries</h2>
+      <table id="deliveries"><thead><tr><th>Created</th><th>Event</th><th>State</th><th>Attempts</th><th>Last</th></tr></thead><tbody></tbody></table>
+      <h3>Received by demo sink</h3>
+      <table id="sink"><thead><tr><th>Received</th><th>Event</th><th>Signature</th><th>Attempt</th></tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Entitlement check</h2>
+    <form id="entitlement" class="inline">
+      <input name="subject" placeholder="subject (e.g. cust-005)" value="cust-005">
+      <input name="meter" placeholder="meter" value="api_calls">
+      <input name="requested" type="number" min="0" step="1" value="1">
+      <button>Check</button>
+      <code id="entitlementResult"></code>
+    </form>
+  </section>
+</main>
+
+<div id="log" class="log"></div>
+<script src="/ui/app.js"></script>
+</body>
+</html>
