@@ -59,6 +59,7 @@ class DashboardController {
     }
 
     record CustomerRow(
+            UUID customerId,
             String externalId,
             String name,
             String plan,
@@ -91,7 +92,8 @@ class DashboardController {
                     .filter(s -> s.customerId().equals(c.id()) && s.coversInstant(now))
                     .findFirst();
             if (sub.isEmpty()) {
-                rows.add(new CustomerRow(c.externalId(), c.name(), null, null, null, null, List.of(), null, null));
+                rows.add(new CustomerRow(
+                        c.id(), c.externalId(), c.name(), null, null, null, null, List.of(), null, null));
                 continue;
             }
             PlanView plan = plans.get(sub.get().planId());
@@ -104,6 +106,7 @@ class DashboardController {
                     ? credits.balance(c.id(), plan.currency(), now).rounded().amount()
                     : null;
             rows.add(new CustomerRow(
+                    c.id(),
                     c.externalId(),
                     c.name(),
                     plan == null ? null : plan.code(),
@@ -132,10 +135,11 @@ class DashboardController {
 
     private static int order(PeriodState s) {
         return switch (s) {
-            case OPEN -> 0;
-            case CLOSING -> 1;
-            case RATED -> 2;
-            case FINALIZED -> 3;
+            // settled and closing periods carry results and actions; open ones are routine
+            case CLOSING -> 0;
+            case RATED -> 1;
+            case FINALIZED -> 2;
+            case OPEN -> 3;
         };
     }
 }

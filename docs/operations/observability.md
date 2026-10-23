@@ -43,7 +43,7 @@ Plus the standard sets: `http_server_requests_seconds` (per URI/status), `kafka_
 2. Ingest accepted vs invalid
 3. Metering outcomes (stored / duplicate / late)
 4. Rejected events by reason
-5. Consumer lag per partition
+5. Consumer lag (Kafka `records-lag-max`, max per consumer thread — a windowed maximum, so it reports the backlog seen during the last ~60 s)
 6. Latency p99: ingest publish, metering batch, entitlement check, rating
 7. HTTP p99 by endpoint
 8. Entitlement decisions

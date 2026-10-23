@@ -108,6 +108,7 @@ public final class Simulator {
             HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     private final ObjectMapper json = new ObjectMapper();
     private final Map<String, Expected> expected = new ConcurrentHashMap<>();
+    private final java.util.Set<String> settledCustomers = ConcurrentHashMap.newKeySet();
     private final Stats stats = new Stats();
     private final AtomicLong eventSeq = new AtomicLong();
     private final Instant runId = Instant.now();
@@ -136,7 +137,7 @@ public final class Simulator {
                 opts.late() * 100,
                 opts.invalid() * 100,
                 opts.seed());
-        Map<String, Instant> periodStarts = opts.verify() ? loadOpenPeriodStarts() : Map.of();
+        Map<String, Instant> periodStarts = loadOpenPeriodStarts();
 
         ExecutorService pool = Executors.newFixedThreadPool(opts.threads());
         Random random = new Random(opts.seed());
@@ -191,13 +192,28 @@ public final class Simulator {
                 exp.apiCalls.increment();
                 stats.invalidSent.increment();
             } else if (roll < opts.invalid() + opts.late()) {
-                // Late: occurred before the current period started → adjustment, not counted in live usage.
                 Instant start = periodStarts.get(customer);
-                Instant occurred =
-                        start == null ? now.minus(Duration.ofHours(2)) : start.minusSeconds(30 + random.nextInt(600));
-                event = event(eventId, "request", customer, occurred, Map.of("tokens", 100));
-                exp.lateEvents.increment();
-                stats.lateSent.increment();
+                if (start != null && settledCustomers.contains(customer)) {
+                    // Late: inside an already-rated period → becomes an adjustment, not live usage.
+                    Instant occurred = start.minusSeconds(30 + random.nextInt(600));
+                    event = event(eventId, "request", customer, occurred, Map.of("tokens", 100));
+                    exp.lateEvents.increment();
+                    stats.lateSent.increment();
+                } else {
+                    // No settled period yet: an old-but-in-period event is still live usage and is tallied.
+                    Instant occurred = start == null
+                            ? now
+                            : now.minusSeconds(Math.min(
+                                    600,
+                                    Math.max(
+                                            1,
+                                            java.time.Duration.between(start, now)
+                                                            .toSeconds()
+                                                    - 1)));
+                    event = event(eventId, "request", customer, occurred, Map.of("tokens", 100));
+                    exp.apiCalls.increment();
+                    exp.tokens.add(100);
+                }
             } else {
                 int kind = random.nextInt(10);
                 if (kind < 7) {
@@ -333,11 +349,15 @@ public final class Simulator {
             customerIdToExternal.put(c.get("id").asString(), c.get("externalId").asString());
         }
         for (JsonNode p : periods) {
-            if (p.get("state").asString().equals("OPEN")) {
-                String ext = customerIdToExternal.get(p.get("customerId").asString());
-                if (ext != null) {
-                    starts.put(ext, Instant.parse(p.get("startsAt").asString()));
-                }
+            String ext = customerIdToExternal.get(p.get("customerId").asString());
+            if (ext == null) {
+                continue;
+            }
+            String state = p.get("state").asString();
+            if (state.equals("OPEN")) {
+                starts.put(ext, Instant.parse(p.get("startsAt").asString()));
+            } else if (state.equals("RATED") || state.equals("FINALIZED")) {
+                settledCustomers.add(ext);
             }
         }
         return starts;
