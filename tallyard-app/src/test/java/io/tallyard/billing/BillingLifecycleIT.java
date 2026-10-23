@@ -148,6 +148,10 @@ class BillingLifecycleIT extends AbstractIntegrationTest {
         assertThat(invoice.get("subtotal").decimalValue()).isEqualByComparingTo("21.00");
         assertThat(invoice.get("creditsApplied").decimalValue()).isEqualByComparingTo("5.00");
         assertThat(invoice.get("total").decimalValue()).isEqualByComparingTo("16.00");
+        // what is persisted must match what the rating call returned
+        JsonNode stored = e.admin().getJson("/v1/periods/" + period + "/invoice");
+        assertThat(stored.get("creditsApplied").decimalValue()).isEqualByComparingTo("5.00");
+        assertThat(stored.get("total").decimalValue()).isEqualByComparingTo("16.00");
         JsonNode grants = e.admin().getJson("/v1/customers/prepaid/credits");
         assertThat(grants.get(0).get("remaining").decimalValue()).isEqualByComparingTo("0");
         assertThat(e.admin()

@@ -198,10 +198,12 @@ class BillingService implements BillingPeriods, BillingQueries {
                     json.write(line.breakdown())));
         }
         // The invoice row must exist before the credit ledger references it (FK credit_ledger_entry.invoice_id).
-        invoices.saveAndFlush(invoice);
+        // save() on an entity with an assigned id merges and returns the managed copy; mutate that one.
+        invoice = invoices.saveAndFlush(invoice);
         CreditLedger.Application applied =
                 credits.apply(period.getTenantId(), period.getCustomerId(), subtotal, invoiceId, now);
         invoice.applyCredits(applied.applied().amount());
+        invoices.flush();
         Money total = subtotal.minus(applied.applied());
         period.markRated(now);
 
